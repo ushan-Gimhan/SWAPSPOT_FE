@@ -1,4 +1,6 @@
 import React from "react";
+import Header from "../components/Header"; 
+import Footer from "../components/Footer"; 
 
 interface LoginProps {
   setView: (view: any) => void;
@@ -7,67 +9,90 @@ interface LoginProps {
 const LoginPage: React.FC<LoginProps> = ({ setView }) => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Add your login logic here
     console.log("User logged in");
-    setView("market"); // Redirect to app on success
+    setView("market"); 
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-slate-100 p-4">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Welcome Back</h2>
-          <p className="text-gray-500 text-sm mt-2">Please enter your details</p>
-        </div>
+    // 1. Updated Parent Background to the Deep Indigo Theme
+    <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden">
+      
+      {/* 2. Background Decorative Elements (Subtle Glows) */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
+      </div>
 
-        <form className="space-y-5" onSubmit={handleLogin}>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input 
-              type="email" 
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" 
-              placeholder="you@example.com" 
-              required 
-            />
+      {/* 3. Header */}
+      <Header />
+
+      {/* 4. Main content area */}
+      <main className="relative z-10 flex-grow flex items-center justify-center p-4 py-16">
+        {/* Login Card */}
+        <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl shadow-black/50 border border-white/10 w-full max-w-md transform transition-all">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome Back</h2>
+            <p className="text-gray-500 text-sm mt-2 font-medium">Please sign in to your TradeHub account</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input 
-              type="password" 
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" 
-              placeholder="••••••••" 
-              required 
-            />
+
+          <form className="space-y-6" onSubmit={handleLogin}>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Email Address</label>
+              <input 
+                type="email" 
+                className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400" 
+                placeholder="name@company.com" 
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Password</label>
+              <input 
+                type="password" 
+                className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400" 
+                placeholder="••••••••" 
+                required 
+              />
+            </div>
+            
+            <div className="flex items-center justify-between text-sm px-1">
+              <label className="flex items-center cursor-pointer group">
+                <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                <span className="ml-2 text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>
+              </label>
+              <button type="button" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
+                Forgot password?
+              </button>
+            </div>
+
+            <button 
+              type="submit" 
+              className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/30 active:scale-[0.98] mt-2"
+            >
+              Log In
+            </button>
+          </form>
+
+          {/* Social login divider (Optional but looks good) */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-100"></span></div>
+            <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400 font-medium">Or continue with</span></div>
           </div>
-          
-          <div className="flex items-center justify-between text-sm">
-            <label className="flex items-center">
-              <input type="checkbox" className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
-              <span className="ml-2 text-gray-600">Remember me</span>
-            </label>
-            <button type="button" className="text-indigo-600 hover:text-indigo-500 font-medium">
-              Forgot password?
+
+          <div className="mt-2 text-center text-sm">
+            <span className="text-gray-600 font-medium">New to TradeHub? </span>
+            <button 
+              onClick={() => setView("signup")} 
+              className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline underline-offset-4 transition-all"
+            >
+              Create an account
             </button>
           </div>
-
-          <button 
-            type="submit" 
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 font-medium transition-colors"
-          >
-            Log In
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm border-t border-gray-100 pt-4">
-          <span className="text-gray-600">Don't have an account? </span>
-          <button 
-            onClick={() => setView("signup")} 
-            className="text-indigo-600 font-medium hover:underline"
-          >
-            Sign up
-          </button>
         </div>
-      </div>
+      </main>
+
+      {/* 5. Footer */}
+      <Footer />
     </div>
   );
 };
