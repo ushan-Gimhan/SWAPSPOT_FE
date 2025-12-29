@@ -44,7 +44,7 @@ const LoginPage: React.FC<LoginProps> = ({ setView }) => {
       });
 
       // ✅ Step 6: navigate ONLY on success
-      navigate("/example");
+      navigate("/dashboard");
 
       // Optional UI fallback
       setView?.("home");

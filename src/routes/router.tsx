@@ -5,15 +5,16 @@ import { useAuth } from "../context/authContext";
 const LandingPage = lazy(() => import("../pages/Home"));
 const Login = lazy(() => import("../pages/Login"));
 const SignUp = lazy(() => import("../pages/SignUp"));
-const Example = lazy(() => import("../pages/UserDashboard"));
+const UserDashboard = lazy(() => import("../pages/UserDashboard"));
+const UserProfile = lazy(() => import("../pages/UserProfile"));
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) return null;
 
-  // ✅ If logged in → go to example
-  if (user) return <Navigate to="/example" replace />;
+  // ✅ If logged in → go to dashboard
+  if (user) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 }
@@ -52,9 +53,12 @@ export default function Router() {
             </PublicOnlyRoute>
           }
         />
+        
 
         {/* Protected Page */}
-        <Route path="/example" element={<Example />} />
+        <Route path="/dashboard" element={<UserDashboard />} />
+
+        <Route path="/profile" element={<UserProfile />} />"
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
