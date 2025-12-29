@@ -17,36 +17,41 @@ const LoginPage: React.FC<LoginProps> = ({ setView }) => {
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
-  //login method
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
 
     try {
-      // Call login API
+      // ✅ Step 1: login API
       const res = await login(email, password);
 
-      // Save tokens
+      // ✅ Step 2: validate response
+      if (!res?.data?.accessToken) {
+        throw new Error("Invalid login response");
+      }
+
+      // ✅ Step 3: save tokens
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
 
-      // Get user details
+      // ✅ Step 4: get logged-in user
       const me = await getMyDetails();
 
-      // Update Auth context
+      // ✅ Step 5: update auth context
       setUser({
         email: me.email,
         role: Array.isArray(me.role) ? me.role : [me.role],
       });
 
-      // Navigate to home
-      navigate("/home");
+      // ✅ Step 6: navigate ONLY on success
+      navigate("/example");
 
-      // Optional: fallback to setView if provided
-      if (setView) setView("market");
+      // Optional UI fallback
+      setView?.("home");
 
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Login failed!");
+    } catch (err: unknown) {
+      // ❌ Login failed → stay on login page
+      setError("Invalid email or password");
     }
   };
 
@@ -120,9 +125,9 @@ const LoginPage: React.FC<LoginProps> = ({ setView }) => {
 
           <div className="mt-2 text-center text-sm">
             <span className="text-gray-600 font-medium">New to TradeHub? </span>
-            <button 
-              onClick={() => setView && setView("signup")} 
-              className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline underline-offset-4 transition-all"
+            <button
+            onClick={() => navigate("/signup")}
+            className="text-indigo-600 font-bold hover:text-indigo-700 hover:underline underline-offset-4 transition-all"
             >
               Create an account
             </button>

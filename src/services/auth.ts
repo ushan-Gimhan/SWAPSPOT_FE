@@ -6,15 +6,13 @@ export const login = async (email: string, password: string) => {
 };
 
 export const register = async (
-  firstName: string,
-  lastName: string,
+  fullName: string,
   email: string,
   password: string,
   role: string
 ) => {
   const res = await api.post('/auth/register', {
-    firstName,
-    lastName,
+    fullName,
     email,
     password,
     role,
