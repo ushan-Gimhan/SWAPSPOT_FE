@@ -1,234 +1,438 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Search, MessageSquare, ArrowRightLeft, Star, 
   Filter, ShoppingBag, Sparkles, TrendingUp, 
-  Zap, ChevronRight, Gift, Tag, Repeat, X, ArrowLeft, Heart, ShieldCheck
+  Zap, ChevronRight, Gift, Tag, Repeat, X, ArrowLeft, Heart, ShieldCheck, Send, MapPin, Clock,
+  Loader2
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { getAllItems } from '../services/item'; // 1. Import Service
 
 // --- TYPES ---
 interface Item {
-  id: number;
+  id: string; // Changed to string for MongoDB _id
   name: string;
   price: number;
-  image: string;
+  image: string; 
+  isImageFile: boolean; // New flag: True = URL, False = Emoji
   seller: string;
+  location: string;
   rating: number;
   condition: string;
   mode: 'sell' | 'exchange' | 'charity';
   seeking?: string; 
   category: string;
   description: string;
+  postedAt: string;
 }
 
-const TradingPlatform: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('listings');
+const TradingPlatform = () => {
+  // --- STATE ---
+  const [items, setItems] = useState<Item[]>([]); // Data from API
+  const [loading, setLoading] = useState(true);   // Loading state
   const [filterMode, setFilterMode] = useState<'all' | 'sell' | 'exchange' | 'charity'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  
+  // Chat State
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'seller', text: 'Hi! Are you interested in this? All proceeds/items go to helping the community.', time: '10:05 AM' }
+    { sender: 'seller', text: 'Hi there! Thanks for viewing my listing. Let me know if you have questions!', time: '10:05 AM' }
   ]);
 
-  // Updated Mock Data for Charity
-  const allItems: Item[] = [
-    { id: 1, name: 'Vintage Camera', price: 250, image: '📷', seller: 'PhotoPro', rating: 4.8, condition: 'Mint', mode: 'sell', category: 'Electronics', description: 'A perfectly working 1970s film camera. Great for enthusiasts.' },
-    { id: 2, name: 'Gaming Laptop', price: 0, image: '💻', seller: 'TechDeals', rating: 4.9, condition: 'Used', mode: 'exchange', seeking: 'MacBook M2', category: 'Tech', description: 'High performance gaming laptop. Looking to swap for a MacBook for work.' },
-    { id: 3, name: 'School Backpack', price: 0, image: '🎒', seller: 'KindSoul', rating: 5.0, condition: 'New', mode: 'charity', category: 'Education', description: 'Donating 5 new backpacks for students in need. Please message if you know a family.' },
-    { id: 4, name: 'Study Desk', price: 0, image: '🪑', seller: 'HomeStyle', rating: 4.5, condition: 'Fair', mode: 'charity', category: 'Furniture', description: 'Giving away my old desk. Sturdy and useful for a college student.' },
-    { id: 5, name: 'Smart Watch', price: 180, image: '⌚', seller: 'GadgetHub', rating: 4.6, condition: 'Mint', mode: 'sell', category: 'Wearables', description: 'Latest series smart watch. Box and charger included.' },
-  ];
+  // --- FETCH DATA (useEffect) ---
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllItems(); 
+        
+        // Map Backend Data (MongoDB) to UI Structure
+        const mappedItems = response.data.map((backendItem: any) => ({
+          id: backendItem._id,
+          name: backendItem.title,
+          price: backendItem.price,
+          // Handle Image Logic: URL or Emoji Fallback
+          image: backendItem.images && backendItem.images.length > 0 
+            ? `http://localhost:5000/${backendItem.images[0].replace(/\\/g, '/')}` // Fix Windows paths if necessary
+            : getCategoryEmoji(backendItem.category),
+          isImageFile: backendItem.images && backendItem.images.length > 0,
+          seller: backendItem.userId?.fullName || 'Unknown User',
+          location: 'Global', // Placeholder until location is added to backend
+          rating: 5.0, 
+          condition: backendItem.condition,
+          mode: backendItem.mode.toLowerCase(), // Convert "SELL" to "sell"
+          seeking: backendItem.seeking,
+          category: backendItem.category,
+          description: backendItem.description,
+          postedAt: formatTimeAgo(new Date(backendItem.createdAt))
+        }));
 
+        setItems(mappedItems);
+      } catch (error) {
+        console.error("Failed to fetch items:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, []);
+
+  // Helper: Get Emoji if no image uploaded
+  const getCategoryEmoji = (category: string) => {
+    const cat = category.toLowerCase();
+    if (cat.includes('tech') || cat.includes('electron')) return '💻';
+    if (cat.includes('camera')) return '📷';
+    if (cat.includes('music')) return '🎸';
+    if (cat.includes('cloth') || cat.includes('fashion')) return '👕';
+    if (cat.includes('home') || cat.includes('garden')) return '🪑';
+    if (cat.includes('sport')) return '⚽';
+    return '📦';
+  };
+
+  // Helper: Format Date
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.abs(now.getTime() - date.getTime()) / 36e5;
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
+    return `${Math.floor(diffInHours / 24)}d ago`;
+  };
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, selectedItem]);
+
+  // --- FILTERS ---
   const filteredListings = useMemo(() => {
-    if (filterMode === 'all') return allItems;
-    return allItems.filter(item => item.mode === filterMode);
-  }, [filterMode, allItems]);
+    return items.filter(item => {
+      const matchesMode = filterMode === 'all' || item.mode === filterMode;
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            item.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesMode && matchesSearch;
+    });
+  }, [items, filterMode, searchQuery]);
 
+  // --- HANDLERS ---
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
-    setChatMessages([...chatMessages, { sender: 'buyer', text: newMessage, time: 'Just now' }]);
+    setChatMessages(prev => [...prev, { sender: 'buyer', text: newMessage, time: 'Just now' }]);
     setNewMessage('');
   };
 
+  const getModeColor = (mode: string) => {
+    switch (mode) {
+      case 'sell': return 'text-indigo-600 bg-indigo-50 border-indigo-200';
+      case 'exchange': return 'text-amber-600 bg-amber-50 border-amber-200';
+      case 'charity': return 'text-rose-600 bg-rose-50 border-rose-200';
+      default: return 'text-slate-600 bg-slate-50 border-slate-200';
+    }
+  };
+
+  const getModeBadge = (mode: string) => {
+    switch(mode) {
+        case 'sell': return 'bg-indigo-600';
+        case 'exchange': return 'bg-amber-500';
+        case 'charity': return 'bg-rose-500';
+        default: return 'bg-slate-500';
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans text-slate-800">
       <Header />
 
       {/* --- HERO SECTION --- */}
-      <section className="bg-[#1e1b4b] text-white pt-12 pb-24 px-4 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 bg-pink-500/20 px-3 py-1 rounded-full text-xs font-bold text-pink-300 border border-white/10">
-                <Heart size={14} /> Community Driven
-              </div>
-              <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
-                Swap, Sell, or <br />
-                <span className="text-pink-400">Donate for Good.</span>
-              </h1>
-              <p className="text-gray-400 max-w-md text-lg">
-                Join thousands of users exchanging value and giving back to the community.
-              </p>
+      <section className="relative bg-[#1e1b4b] text-white pt-16 pb-32 px-4 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+            <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[100px]" />
+            <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-purple-500/20 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="max-w-5xl mx-auto relative z-10 text-center space-y-8">
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-sm font-semibold text-indigo-200 border border-white/10 animate-in fade-in slide-in-from-top-4">
+             <Sparkles size={14} className="text-yellow-400" /> Community Marketplace
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-tight">
+            Discover. Trade. <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+              Impact the World.
+            </span>
+          </h1>
+
+          <div className="max-w-2xl mx-auto relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+            <div className="relative flex items-center bg-white rounded-2xl p-2 shadow-2xl">
+                <Search className="ml-4 text-slate-400" size={24} />
+                <input 
+                    type="text"
+                    placeholder="Search for cameras, laptops, donations..."
+                    className="w-full px-4 py-3 text-slate-800 bg-transparent outline-none text-lg placeholder:text-slate-400"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button className="hidden sm:block bg-[#1e1b4b] text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-900 transition-colors">
+                    Find
+                </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-grow max-w-7xl mx-auto w-full -mt-16 px-4 pb-20 relative z-20">
+      {/* --- CONTENT SECTION --- */}
+      <main className="flex-grow max-w-7xl mx-auto w-full -mt-20 px-4 pb-20 relative z-20">
         
-        {/* If an item is selected, show the Detail + Chat "Topup" View */}
-        {selectedItem ? (
-          <div className="animate-in fade-in zoom-in duration-300 bg-white rounded-[3rem] shadow-2xl border border-gray-100 overflow-hidden min-h-[700px] flex flex-col lg:flex-row">
+        {loading ? (
+             // --- LOADING STATE ---
+             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl shadow-xl min-h-[400px]">
+                <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
+                <p className="text-slate-500 font-medium">Loading items...</p>
+             </div>
+        ) : selectedItem ? (
+          // --- DETAIL VIEW ---
+          <div className="animate-in fade-in zoom-in-95 duration-300 bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col lg:flex-row min-h-[700px]">
             
-            {/* LEFT: Item Details */}
-            <div className="lg:w-1/2 p-10 border-r border-gray-100">
-              <button 
+            {/* LEFT: Item Info */}
+            <div className="lg:w-7/12 p-8 lg:p-12 border-r border-slate-100 relative">
+               <button 
                 onClick={() => setSelectedItem(null)}
-                className="mb-8 flex items-center gap-2 text-gray-400 hover:text-[#1e1b4b] font-bold transition"
+                className="absolute top-8 left-8 p-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition shadow-sm z-10"
               >
-                <ArrowLeft size={20} /> Back to Marketplace
+                <ArrowLeft size={20} className="text-slate-600" />
               </button>
 
-              <div className="relative h-80 bg-gray-50 rounded-[2rem] flex items-center justify-center text-[10rem] mb-8">
-                {selectedItem.image}
-                <div className={`absolute top-6 left-6 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest text-white shadow-lg ${
-                  selectedItem.mode === 'charity' ? 'bg-pink-500' : selectedItem.mode === 'exchange' ? 'bg-purple-600' : 'bg-blue-600'
-                }`}>
-                  {selectedItem.mode}
+              <div className="flex flex-col h-full">
+                {/* Image Placeholder */}
+                <div className="relative aspect-video bg-slate-50 rounded-3xl flex items-center justify-center text-[8rem] mb-8 border border-slate-100 overflow-hidden">
+                    {/* CONDITIONAL RENDERING: Real Image vs Emoji */}
+                    {selectedItem.isImageFile ? (
+                        <img 
+                            src={selectedItem.image} 
+                            alt={selectedItem.name} 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                                // Fallback if image fails to load
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerText = getCategoryEmoji(selectedItem.category);
+                            }}
+                        />
+                    ) : (
+                        <span>{selectedItem.image}</span>
+                    )}
+                    
+                    <span className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-lg ${getModeBadge(selectedItem.mode)}`}>
+                        {selectedItem.mode}
+                    </span>
+                    <button className="absolute bottom-4 right-4 p-3 bg-white/80 backdrop-blur-sm rounded-full hover:text-red-500 transition shadow-md">
+                        <Heart size={20} />
+                    </button>
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-4xl font-black text-gray-900">{selectedItem.name}</h2>
-                  <div className="text-right">
-                    {selectedItem.mode === 'sell' && <p className="text-3xl font-black text-blue-600">${selectedItem.price}</p>}
-                    {selectedItem.mode === 'charity' && <p className="text-2xl font-black text-pink-500 italic">DONATION</p>}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 py-4 border-y border-gray-50">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center font-bold">{selectedItem.seller.charAt(0)}</div>
-                  <div>
-                    <p className="font-bold text-gray-900">{selectedItem.seller}</p>
-                    <p className="text-xs text-gray-400">Trusted Seller • ⭐ {selectedItem.rating}</p>
-                  </div>
-                </div>
-
-                <p className="text-gray-500 leading-relaxed py-4">{selectedItem.description}</p>
-
-                {selectedItem.mode === 'charity' && (
-                  <div className="bg-pink-50 p-6 rounded-2xl border border-pink-100 flex items-start gap-4">
-                    <Heart className="text-pink-500 shrink-0" />
-                    <div>
-                      <p className="text-pink-900 font-bold text-sm uppercase">Charity Listing</p>
-                      <p className="text-pink-700 text-xs">This item is being donated. Priority is given to verified community members and students.</p>
+                {/* Details */}
+                <div className="space-y-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="text-3xl font-black text-slate-900 mb-2">{selectedItem.name}</h2>
+                            <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
+                                <span className="flex items-center gap-1"><MapPin size={14}/> {selectedItem.location}</span>
+                                <span className="flex items-center gap-1"><Clock size={14}/> Posted {selectedItem.postedAt}</span>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                             {selectedItem.mode === 'sell' && <p className="text-3xl font-black text-indigo-600">${selectedItem.price}</p>}
+                             {selectedItem.mode === 'charity' && <p className="text-3xl font-black text-rose-500">FREE</p>}
+                             {selectedItem.mode === 'exchange' && <p className="text-xl font-black text-amber-600 uppercase">Trade</p>}
+                        </div>
                     </div>
-                  </div>
-                )}
+
+                    <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                         <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-lg">
+                             {selectedItem.seller.charAt(0)}
+                         </div>
+                         <div>
+                             <p className="font-bold text-slate-900">{selectedItem.seller}</p>
+                             <div className="flex items-center gap-1 text-xs text-slate-500">
+                                 <Star size={12} className="fill-yellow-400 text-yellow-400"/> 
+                                 <span className="font-bold text-slate-700">{selectedItem.rating}</span> 
+                                 <span>(124 reviews)</span>
+                             </div>
+                         </div>
+                         <button className="ml-auto text-sm font-bold text-indigo-600 hover:underline">View Profile</button>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-slate-900 mb-2">Description</h3>
+                        <p className="text-slate-600 leading-relaxed">{selectedItem.description}</p>
+                    </div>
+
+                    {selectedItem.mode === 'exchange' && (
+                        <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl">
+                             <h4 className="font-bold text-amber-800 text-sm mb-1">Seeking to Trade For:</h4>
+                             <p className="text-amber-700 font-medium">{selectedItem.seeking}</p>
+                        </div>
+                    )}
+                </div>
               </div>
             </div>
 
-            {/* RIGHT: Chat Area */}
-            <div className="lg:w-1/2 flex flex-col bg-gray-50/50">
-              <div className="p-6 bg-white border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <h3 className="font-black text-gray-800">Chat with {selectedItem.seller}</h3>
-                </div>
-                <ShieldCheck className="text-indigo-400" />
-              </div>
-
-              <div className="flex-grow p-8 overflow-y-auto space-y-4">
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.sender === 'buyer' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[80%] p-4 rounded-3xl shadow-sm text-sm font-medium ${
-                      msg.sender === 'buyer' ? 'bg-[#1e1b4b] text-white rounded-tr-none' : 'bg-white text-gray-700 border border-gray-100 rounded-tl-none'
-                    }`}>
-                      {msg.text}
-                      <p className="text-[10px] mt-2 opacity-50">{msg.time}</p>
+            {/* RIGHT: Chat */}
+            <div className="lg:w-5/12 flex flex-col bg-slate-50/50 relative">
+                <div className="p-6 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm z-10">
+                    <div>
+                        <h3 className="font-bold text-slate-800">Message Seller</h3>
+                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"/> Online now
+                        </p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                    <ShieldCheck className="text-emerald-500" />
+                </div>
 
-              <div className="p-8 bg-white border-t border-gray-100">
-                <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                  <button onClick={() => setNewMessage("I'm interested in this for a donation.")} className="whitespace-nowrap px-4 py-2 bg-pink-50 text-pink-600 rounded-full text-xs font-bold border border-pink-100">Charity Request</button>
-                  <button onClick={() => setNewMessage("Is this still available?")} className="whitespace-nowrap px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">Availability</button>
-                  <button onClick={() => setNewMessage("Can we meet up tomorrow?")} className="whitespace-nowrap px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-bold">Meeting</button>
+                {/* Messages Area */}
+                <div ref={chatScrollRef} className="flex-grow p-6 overflow-y-auto space-y-6">
+                    <div className="flex justify-center">
+                        <span className="text-[10px] bg-slate-200 text-slate-500 px-3 py-1 rounded-full font-bold uppercase tracking-wider">
+                            Safety Tip: Do not send money outside the app
+                        </span>
+                    </div>
+
+                    {chatMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.sender === 'buyer' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${
+                                msg.sender === 'buyer' 
+                                ? 'bg-indigo-600 text-white rounded-br-none' 
+                                : 'bg-white text-slate-700 border border-slate-200 rounded-bl-none'
+                            }`}>
+                                {msg.text}
+                                <p className={`text-[10px] mt-2 font-medium ${msg.sender === 'buyer' ? 'text-indigo-200' : 'text-slate-400'}`}>
+                                    {msg.time}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <div className="flex gap-4">
-                  <input 
-                    type="text" 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Type your message..." 
-                    className="flex-1 px-6 py-4 bg-gray-100 border-none rounded-2xl outline-none focus:ring-2 focus:ring-pink-500 transition font-medium" 
-                  />
-                  <button 
-                    onClick={handleSendMessage}
-                    className="w-14 h-14 bg-[#1e1b4b] text-white rounded-2xl flex items-center justify-center hover:bg-black transition shadow-lg"
-                  >
-                    <ChevronRight />
-                  </button>
+
+                {/* Input Area */}
+                <div className="p-4 bg-white border-t border-slate-200">
+                    <div className="flex gap-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+                         {['Is this still available?', 'Can I see more photos?', 'When can you meet?'].map((quickMsg) => (
+                             <button 
+                                key={quickMsg} 
+                                onClick={() => setNewMessage(quickMsg)}
+                                className="whitespace-nowrap px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 rounded-full text-xs font-bold transition"
+                             >
+                                 {quickMsg}
+                             </button>
+                         ))}
+                    </div>
+                    <div className="relative flex items-center gap-2">
+                        <input 
+                            type="text" 
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                            placeholder="Type a message..." 
+                            className="flex-1 pl-4 pr-12 py-3.5 bg-slate-100 border-transparent focus:bg-white focus:border-indigo-500 border-2 rounded-xl outline-none transition font-medium text-slate-800"
+                        />
+                        <button 
+                            onClick={handleSendMessage}
+                            disabled={!newMessage.trim()}
+                            className="absolute right-2 p-2 bg-indigo-600 disabled:bg-slate-300 text-white rounded-lg hover:bg-indigo-700 transition"
+                        >
+                            <Send size={18} />
+                        </button>
+                    </div>
                 </div>
-              </div>
             </div>
           </div>
+
         ) : (
-          /* GRID VIEW (When no item is selected) */
+          // --- GRID VIEW ---
           <>
-            {/* Mode Switcher */}
-            <div className="bg-white p-2 rounded-[2.5rem] shadow-2xl border border-gray-100 flex flex-wrap gap-2 mb-10">
+            {/* Tabs */}
+            <div className="bg-white p-2 rounded-2xl shadow-xl shadow-slate-200/40 border border-slate-100 flex flex-wrap gap-2 mb-10 max-w-4xl mx-auto">
               {[
-                { id: 'all', label: 'All Feed', icon: <ShoppingBag size={18} /> },
-                { id: 'sell', label: 'For Sale', icon: <Tag size={18} /> },
+                { id: 'all', label: 'All Listings', icon: <ShoppingBag size={18} /> },
+                { id: 'sell', label: 'Buy', icon: <Tag size={18} /> },
                 { id: 'exchange', label: 'Exchange', icon: <Repeat size={18} /> },
-                { id: 'charity', label: 'Donations', icon: <Heart size={18} /> },
+                { id: 'charity', label: 'Donations', icon: <Gift size={18} /> },
               ].map((mode) => (
                 <button
                   key={mode.id}
                   onClick={() => setFilterMode(mode.id as any)}
-                  className={`flex-1 min-w-[140px] flex items-center justify-center gap-3 py-4 rounded-[2rem] font-black text-xs tracking-widest transition-all ${
-                    filterMode === mode.id ? 'bg-[#1e1b4b] text-white shadow-xl scale-105' : 'text-gray-400 hover:bg-gray-50'
+                  className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+                    filterMode === mode.id 
+                    ? 'bg-[#1e1b4b] text-white shadow-lg' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                 >
-                  {mode.icon} {mode.label.toUpperCase()}
+                  {mode.icon} {mode.label}
                 </button>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {filteredListings.map((item) => (
-                <div 
-                  key={item.id} 
-                  onClick={() => setSelectedItem(item)}
-                  className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group"
-                >
-                  <div className="h-56 bg-gray-50 flex items-center justify-center text-7xl group-hover:scale-110 transition-transform">
-                    {item.image}
-                    <div className={`absolute top-5 left-5 px-3 py-1 rounded-full text-[9px] font-black uppercase text-white ${
-                      item.mode === 'charity' ? 'bg-pink-500' : item.mode === 'exchange' ? 'bg-purple-600' : 'bg-blue-600'
-                    }`}>
-                      {item.mode}
+            {/* Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredListings.length > 0 ? (
+                  filteredListings.map((item) => (
+                    <div 
+                      key={item.id} 
+                      onClick={() => setSelectedItem(item)}
+                      className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full"
+                    >
+                      {/* Image Area */}
+                      <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center text-6xl group-hover:scale-105 transition-transform duration-500 overflow-hidden">
+                        {item.isImageFile ? (
+                             <img 
+                                src={item.image} 
+                                alt={item.name} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.parentElement!.innerText = getCategoryEmoji(item.category);
+                                }}
+                             />
+                        ) : (
+                             <span>{item.image}</span>
+                        )}
+                        <div className={`absolute top-4 left-4 px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-white tracking-wide ${getModeBadge(item.mode)}`}>
+                          {item.mode}
+                        </div>
+                      </div>
+                      
+                      {/* Content Area */}
+                      <div className="p-5 flex flex-col flex-grow">
+                        <div className="flex justify-between items-start mb-2">
+                             <h3 className="font-bold text-slate-900 line-clamp-1 text-lg">{item.name}</h3>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-4 line-clamp-2">{item.description}</p>
+                        
+                        <div className="mt-auto pt-4 border-t border-slate-50 flex justify-between items-center">
+                          <div>
+                              {item.mode === 'sell' && <span className="text-xl font-black text-indigo-900">${item.price}</span>}
+                              {item.mode === 'charity' && <span className="text-sm font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-md">FREE</span>}
+                              {item.mode === 'exchange' && <span className="text-sm font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md">SWAP</span>}
+                          </div>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${getModeColor(item.mode)} group-hover:bg-opacity-100`}>
+                              <ChevronRight size={18} />
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                  ))
+              ) : (
+                  <div className="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
+                      <ShoppingBag size={64} className="mb-4 text-slate-300" />
+                      <p className="text-xl font-bold text-slate-400">No listings found matching your criteria.</p>
+                      <button onClick={() => {setFilterMode('all'); setSearchQuery('')}} className="mt-4 text-indigo-600 font-bold hover:underline">Clear filters</button>
                   </div>
-                  <div className="p-8">
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">{item.name}</h3>
-                    <p className="text-xs text-gray-400 mb-6">by {item.seller}</p>
-                    <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
-                      <span className="text-xl font-black text-gray-900">
-                        {item.mode === 'sell' ? `$${item.price}` : item.mode === 'charity' ? 'FREE' : 'SWAP'}
-                      </span>
-                      <ChevronRight className="text-gray-300 group-hover:text-pink-500 transition" />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              )}
             </div>
           </>
         )}

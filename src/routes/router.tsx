@@ -10,11 +10,9 @@ const UserProfile = lazy(() => import("../pages/UserProfile"));
 const PostItem = lazy(() => import("../pages/PostItem"));
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user} = useAuth();
 
-  if (isLoading) return null;
-
-  // ✅ If logged in → go to dashboard
+  // If logged in → go to dashboard
   if (user) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;

@@ -136,7 +136,7 @@ const LandingPage = () => {
       {/* Implemented the new Header here */}
       <CreativeHeader />
 
-      <div className="relative flex-grow flex flex-col items-center justify-center overflow-hidden">
+      <div className="relative flex flex-col items-center justify-center overflow-hidden">
         
         {/* Background */}
         <div
@@ -148,7 +148,7 @@ const LandingPage = () => {
           <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/30 rounded-full blur-[120px]" />
           
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent" />
+          <div className="absolute inset-0  from-indigo-500/10 via-transparent to-transparent" />
         </div>
 
         {/* Hero Content */}
@@ -161,8 +161,8 @@ const LandingPage = () => {
             
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight">
               Buy, Sell, and Trade <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                Anything, Anywhere.
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-400">
+                 Anything, Anywhere.
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto font-light leading-relaxed">
