@@ -7,6 +7,7 @@ const Login = lazy(() => import("../pages/Login"));
 const SignUp = lazy(() => import("../pages/SignUp"));
 const UserDashboard = lazy(() => import("../pages/UserDashboard"));
 const UserProfile = lazy(() => import("../pages/UserProfile"));
+const PostItem = lazy(() => import("../pages/PostItem"));
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -58,7 +59,8 @@ export default function Router() {
         {/* Protected Page */}
         <Route path="/dashboard" element={<UserDashboard />} />
 
-        <Route path="/profile" element={<UserProfile />} />"
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/post" element={<PostItem />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

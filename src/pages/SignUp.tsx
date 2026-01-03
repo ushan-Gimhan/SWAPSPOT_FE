@@ -1,22 +1,26 @@
 import React, { useState } from "react";
-import Header from "../components/Header"; 
 import Footer from "../components/Footer"; 
 import { register } from "../services/auth";  
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"; // Added Eye icons
 
 interface SignUpProps {
   setView: (view: string) => void;
 }
 
-const SignUp: React.FC<SignUpProps> = ({ setView }) => {
+const SignUp = ({ setView }: SignUpProps) => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  
+  // 1. New State for toggling visibility
+  const [showPassword, setShowPassword] = useState(false);
+  
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-   const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +55,23 @@ const SignUp: React.FC<SignUpProps> = ({ setView }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden">
+      
+      {/* Back to Home Button */}
+      <button 
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 z-50 flex items-center gap-2 text-white/70 hover:text-white transition-colors font-semibold group"
+      >
+        <div className="p-2 bg-white/10 rounded-full group-hover:bg-white/20 transition-all">
+            <ArrowLeft size={20} />
+        </div>
+        <span className="hidden sm:inline">Back to Home</span>
+      </button>
+
       {/* Background Glows */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute -bottom-[10%] -left-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
       </div>
-
-      <Header />
 
       <main className="relative z-10 flex-grow flex items-center justify-center p-4 py-16">
         <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl shadow-black/50 border border-white/10 w-full max-w-md transform transition-all">
@@ -71,8 +85,8 @@ const SignUp: React.FC<SignUpProps> = ({ setView }) => {
           </div>
 
           <form className="space-y-5" onSubmit={handleSignUp}>
-            {error && <div className="text-red-600 text-sm text-center">{error}</div>}
-            {success && <div className="text-green-600 text-sm text-center">{success}</div>}
+            {error && <div className="text-red-600 text-sm text-center font-medium bg-red-50 p-2 rounded-lg">{error}</div>}
+            {success && <div className="text-green-600 text-sm text-center font-medium bg-green-50 p-2 rounded-lg">{success}</div>}
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
@@ -106,14 +120,26 @@ const SignUp: React.FC<SignUpProps> = ({ setView }) => {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
                 Password
               </label>
-              <input
-                type="password"
-                className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400"
-                placeholder="••••••••"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <input
+                  // 2. Dynamic Type: Text or Password
+                  type={showPassword ? "text" : "password"}
+                  className="block w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-12 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400"
+                  placeholder="••••••••"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                
+                {/* 3. The Toggle Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             <div className="bg-indigo-50/50 p-3 rounded-lg">
