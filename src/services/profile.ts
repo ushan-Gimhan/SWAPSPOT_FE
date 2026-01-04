@@ -1,38 +1,35 @@
 import api from './api';
 
+// Interface for the data you send when updating a profile
 export interface UpdateProfilePayload {
-  fullName?: string;
-  location?: string;
+  name?: string;
   bio?: string;
-  // If you add avatar uploading later, you'd pass the ImgBB URL here
-  avatarUrl?: string; 
+  location?: string;
+  avatar?: string; // For avatar URL if you add image uploading later
 }
 
-export interface ChangePasswordPayload {
-  currentPassword: string;
-  newPassword: string;
-}
-
-//Get Current User Profile 
-export const getProfile = async () => {
-  const res = await api.get('/auth/me'); // Or '/users/profile' depending on your backend
+// Get the current logged-in user's profile
+export const getUserProfile = async () => {
+  // Matches the backend route: GET /api/v1/profile
+  const res = await api.get('/profile');
   return res.data;
 };
 
-//Update Personal Information
-export const updateProfile = async (data: UpdateProfilePayload) => {
-  const res = await api.put('/auth/updatedetails', data); 
+// Update user profile details
+export const updateUserProfile = async (data: UpdateProfilePayload) => {
+  // Matches the backend route: PUT /api/v1/profile
+  const res = await api.put('/profileUpdate', data);
   return res.data;
 };
 
-//Change Password
-export const changePassword = async (data: ChangePasswordPayload) => {
-  const res = await api.put('/auth/updatepassword', data);
-  return res.data;
-};
-
-// Delete Account (Danger Zone)
+// Delete the user's account
 export const deleteAccount = async () => {
-  const res = await api.delete('/auth/delete');
+  // Matches the backend route: DELETE /api/v1/profile
+  const res = await api.delete('/profileDelete');
   return res.data;
 };
+
+export const changeUserPassword = async (currentPassword: string, newPassword: string) => {
+  const res = await api.put('/profile/change-password', { currentPassword, newPassword });
+  return res.data;
+}

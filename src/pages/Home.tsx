@@ -156,7 +156,7 @@ const LandingPage = () => {
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-1000">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-4">
                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-               <span className="text-xs font-bold text-gray-200 uppercase tracking-widest">#1 Marketplace 2024</span>
+               <span className="text-xs font-bold text-gray-200 uppercase tracking-widest">#1 Marketplace 2026</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight">

@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import Header from '../components/Header'; 
 import Footer from '../components/Footer';
-import { createItem } from '../services/item';
-import { uploadToImgBB } from '../services/imgbb'; // Import the new service
+// 1. Import the AI Service here
+import { createItem, getAiPriceSuggestion } from '../services/item'; 
+import { uploadToImgBB } from '../services/imgbb'; 
 
 const PostItem = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const PostItem = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Publishing..."); // Dynamic text
+  const [loadingText, setLoadingText] = useState("Publishing..."); 
   const [dragActive, setDragActive] = useState(false);
 
   const [form, setForm] = useState({
@@ -73,28 +74,68 @@ const PostItem = () => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) processFiles(Array.from(e.dataTransfer.files));
   };
 
-  const getAISuggestion = () => {
-    if (!form.title) { setError("Please enter a title first."); return; }
+// --- REAL AI IMPLEMENTATION (Gemini Powered) ---
+  const getAISuggestion = async () => {
+    // 1. Basic Validation
+    if (!form.title) { 
+        setError("Please enter a Title first so AI knows what to value."); 
+        return; 
+    }
+
     setIsAILoading(true);
-    setTimeout(() => {
-      setForm({ ...form, price: (Math.floor(Math.random() * 200) + 50).toString() });
+    setError(""); // Clear previous errors
+
+    try {
+      let aiImageUrl = "";
+
+      // 2. Image Handling
+      // Gemini works best with an image. If the user picked one, upload it to ImgBB first.
+      if (imageFiles.length > 0) {
+        // Upload just the first image for the estimation
+        // This gives us a public URL (e.g., https://i.ibb.co/...) that Gemini can read
+        aiImageUrl = await uploadToImgBB(imageFiles[0]);
+      }
+
+      // 3. Call Backend (Switched to Gemini internally)
+      const suggestedPrice = await getAiPriceSuggestion(
+        form.title,
+        form.category,
+        form.condition,
+        form.description,
+        aiImageUrl // Public ImgBB URL
+      );
+
+      // 4. Update the Price Input
+      // We convert to string because the HTML input expects a string
+      if (suggestedPrice > 0) {
+        setForm(prev => ({ ...prev, price: suggestedPrice.toString() }));
+        setSuccess(false); // Reset success state if needed
+      } else {
+        setError("AI could not determine a price. Please enter it manually.");
+      }
+
+    } catch (err: any) {
+      console.error("AI Estimation Failed:", err);
+      // Friendly error message
+      setError("AI service is currently busy. Please enter price manually.");
+    } finally {
       setIsAILoading(false);
-    }, 1500);
+    }
   };
 
-  // --- MODIFIED PUBLISH HANDLER ---
+  // --- PUBLISH HANDLER ---
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    //Validation
+    // Validation
     if (!form.title.trim() || !form.description.trim()) {
       setError("Title and Description are required.");
       setLoading(false);
       return;
     }
-    // Optional: Ensure at least one image
+    
     if (imageFiles.length === 0) {
       setError("Please upload at least one photo.");
       setLoading(false);
@@ -102,19 +143,14 @@ const PostItem = () => {
     }
 
     try {
-      // Upload Images to ImgBB
       setLoadingText("Uploading photos...");
       
-      // Map every file to an upload promise
+      // Upload All Images to ImgBB
       const uploadPromises = imageFiles.map((file) => uploadToImgBB(file));
-      
-      // Wait for all uploads to finish
       const imageUrls = await Promise.all(uploadPromises);
 
-      // Send Data to Backend
       setLoadingText("Creating listing...");
 
-      // Prepare JSON payload (No more FormData needed)
       const itemData = {
         title: form.title,
         description: form.description,
@@ -123,23 +159,20 @@ const PostItem = () => {
         mode: mode.toUpperCase(),
         price: mode === 'sell' ? form.price : 0,
         seeking: mode === 'exchange' ? form.seeking : '',
-        images: imageUrls // Send the array of URLs
-      
+        images: imageUrls 
       };
-      const res = await createItem(itemData);
-      console.log(res); // Check console, you will see { message: "...", data: ... }
 
-      // FIX: Check if 'data' exists OR just rely on the try/catch block
-      if (res && res.data) { 
+      const res = await createItem(itemData);
+      console.log(res); 
+
+      // Success Check
+      if (res) { 
         setSuccess(true);
         setTimeout(() => navigate('/dashboard'), 1500);
-      } else {
-        // This might happen if the server returns 200 but empty data
-        setError("Listing created, but response was unexpected.");
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to create listing.");
+      setError(err.response?.data?.message || "Failed to create listing.");
     } finally {
       setLoading(false);
     }
@@ -161,13 +194,12 @@ const PostItem = () => {
       <Header />
       <main className="max-w-6xl mx-auto w-full px-4 py-24 lg:py-28">
         
-        {/* ... Header Section ... */}
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">Create Listing</h1>
                 <p className="text-slate-500 mt-1 font-medium">Post an item to sell, trade, or donate.</p>
             </div>
-            {/* Steps Indicator - keep as is */}
              <div className="flex items-center gap-3 text-sm font-bold bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
                 <span className="flex items-center gap-2 text-indigo-600">
                     <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px]">1</span>
@@ -185,7 +217,6 @@ const PostItem = () => {
           {/* --- LEFT: MEDIA UPLOAD --- */}
           <div className="w-full lg:w-[400px] flex-shrink-0 space-y-6 lg:sticky lg:top-24">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80">
-              {/* ... Image upload UI (keep exactly same as before) ... */}
                <div className="flex items-center justify-between mb-5">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <Camera size={18} className={theme.color} /> Photos
@@ -243,7 +274,6 @@ const PostItem = () => {
             </div>
 
             <div className="space-y-8">
-              {/* Inputs... (Same as before) */}
                <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Listing Title</label>
                 <input type="text" placeholder="e.g. Vintage Canon AE-1 Camera" className="w-full px-5 py-4 bg-slate-50 border-transparent focus:bg-white border-2 rounded-xl text-lg font-bold text-slate-900 outline-none focus:border-indigo-500" value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} />
@@ -274,15 +304,16 @@ const PostItem = () => {
                 {mode === 'sell' && (
                   <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex justify-between items-center mb-3">
-                      <label className={`text-xs font-bold uppercase tracking-wider ${theme.color}`}>Price ($)</label>
+                      <label className={`text-xs font-bold uppercase tracking-wider ${theme.color}`}>Price (LKR)</label>
+                      {/* AI BUTTON HERE */}
                       <button type="button" onClick={getAISuggestion} disabled={isAILoading} className="group flex items-center gap-1.5 px-3 py-1.5 bg-white/60 hover:bg-white rounded-lg text-xs font-bold text-indigo-700 transition-all shadow-sm">
-                         {isAILoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} className="text-indigo-500 group-hover:scale-110 transition-transform"/>}
-                         {isAILoading ? "Calculating..." : "AI Suggest"}
+                          {isAILoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} className="text-indigo-500 group-hover:scale-110 transition-transform"/>}
+                          {isAILoading ? "Calculating..." : "AI Suggest"}
                       </button>
                     </div>
                     <div className="relative">
-                      <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" size={24} />
-                      <input type="number" placeholder="0.00" className="w-full pl-12 pr-4 py-3 bg-white border-transparent rounded-xl text-3xl font-black text-slate-800 placeholder:text-slate-200 focus:ring-0 outline-none" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm pointer-events-none">LKR</span>
+                      <input type="number" placeholder="0" className="w-full pl-14 pr-4 py-3 bg-white border-transparent rounded-xl text-3xl font-black text-slate-800 placeholder:text-slate-200 focus:ring-0 outline-none" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} />
                     </div>
                   </div>
                 )}
@@ -297,8 +328,8 @@ const PostItem = () => {
                 )}
                  {mode === 'charity' && (
                    <div className="flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                     <div className="p-3 bg-white rounded-full shadow-sm text-rose-500 shrink-0"><Heart size={24} fill="currentColor" /></div>
-                     <div><h5 className="font-bold text-rose-900 text-lg">Donation Listing</h5><p className="text-sm text-rose-700 font-medium mt-1">This item will be listed as <span className="font-black">FREE</span>. Verified students and non-profits will get priority.</p></div>
+                      <div className="p-3 bg-white rounded-full shadow-sm text-rose-500 shrink-0"><Heart size={24} fill="currentColor" /></div>
+                      <div><h5 className="font-bold text-rose-900 text-lg">Donation Listing</h5><p className="text-sm text-rose-700 font-medium mt-1">This item will be listed as <span className="font-black">FREE</span>. Verified students and non-profits will get priority.</p></div>
                   </div>
                 )}
               </div>
@@ -323,7 +354,7 @@ const PostItem = () => {
                 {loading ? (
                     <>
                         <Loader2 size={18} className="animate-spin" />
-                        <span>{loadingText}</span> {/* Dynamic text */}
+                        <span>{loadingText}</span> 
                     </>
                 ) : success ? (
                     <>

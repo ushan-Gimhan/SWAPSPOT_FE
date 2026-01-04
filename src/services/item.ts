@@ -45,14 +45,36 @@ export const updateItem = async (id: string, data: Partial<CreateItemPayload>) =
   return res.data;
 };
 
+export const getMyItems = async () => {
+  const res = await api.get('/items/my-items');
+  return res.data;
+};
+
 // Delete an item
 export const deleteItem = async (id: string) => {
   const res = await api.delete(`/items/${id}`);
   return res.data;
 };
 
-// Optional: AI Price Suggestion (if you keep that endpoint)
-export const getAiPriceSuggestion = async (title: string) => {
-    const res = await api.post('/items/ai-price', { title });
-    return res.data;
+export const getUserItems = async (userId: string) => {
+  const res = await api.get(`/items/user/${userId}`);
+  return res.data;
+}
+
+
+export const getAiPriceSuggestion = async (
+  title: string, 
+  category: string, 
+  condition: string, 
+  description: string,
+  imageUrl?: string // The ImgBB URL
+) => {
+  const res = await api.post('/items/ai-price', { 
+    title, 
+    category, 
+    condition, 
+    description, 
+    imageUrl 
+  });
+  return res.data.price; 
 };
