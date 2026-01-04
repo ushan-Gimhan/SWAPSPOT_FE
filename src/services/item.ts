@@ -20,12 +20,15 @@ export const createItem = async (data: any) => {
   return res.data;
 };
 
-// Get all items with optional filters (Search, Category, Mode)
-export const getAllItems = async (params?: { 
-  search?: string; 
-  category?: string; 
-  mode?: string 
+// Update function signature to accept params object
+export const getAllItems = async (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  mode?: string;
 }) => {
+  // Axios accepts 'params' which automatically converts to ?page=1&limit=10...
   const res = await api.get('/items', { params });
   return res.data;
 };
