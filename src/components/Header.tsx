@@ -8,6 +8,7 @@ import {
   PlusCircle,
   ShoppingBag,
   ArrowRightLeft,
+  MessageCircle, // 👈 Added Icon
 } from "lucide-react";
 import { useAuth } from "../context/authContext";
 
@@ -16,13 +17,10 @@ const Header = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Get logout from context
   const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      // 1. Clear auth state (await in case it's an API call)
-      
       if (logout) {
         navigate("/", { replace: true });
         await logout(); 
@@ -30,7 +28,6 @@ const Header = () => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // 2. Always close menu and navigate, even if logout 'fails'
       setIsMobileMenuOpen(false);
       navigate("/", { replace: true });
     }
@@ -63,6 +60,11 @@ const Header = () => {
         <div className="hidden md:flex items-center gap-4">
           <Link to="/dashboard" className={navLinkClass("/dashboard")}>
             <ShoppingBag size={18} strokeWidth={2.5} /> Market
+          </Link>
+
+          {/* 👇 NEW MESSAGES BUTTON */}
+          <Link to="/messages" className={navLinkClass("/messages")}>
+            <MessageCircle size={18} strokeWidth={2.5} /> Messages
           </Link>
 
           <Link to="/post" className={navLinkClass("/post")}>
@@ -103,6 +105,15 @@ const Header = () => {
             className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 text-slate-700 font-bold"
           >
             <ShoppingBag size={20} className="text-indigo-500"/> Market
+          </Link>
+
+          {/* 👇 NEW MESSAGES MOBILE LINK */}
+          <Link 
+            to="/messages" 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 text-slate-700 font-bold"
+          >
+            <MessageCircle size={20} className="text-indigo-500"/> Messages
           </Link>
 
           <Link 
