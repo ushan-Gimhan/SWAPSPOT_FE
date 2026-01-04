@@ -126,16 +126,17 @@ const PostItem = () => {
         images: imageUrls // Send the array of URLs
       
       };
-
       const res = await createItem(itemData);
+      console.log(res); // Check console, you will see { message: "...", data: ... }
 
-      if (res.success) {
+      // FIX: Check if 'data' exists OR just rely on the try/catch block
+      if (res && res.data) { 
         setSuccess(true);
         setTimeout(() => navigate('/dashboard'), 1500);
       } else {
-        setError("Failed to create listing. Please try again.");
+        // This might happen if the server returns 200 but empty data
+        setError("Listing created, but response was unexpected.");
       }
-
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to create listing.");

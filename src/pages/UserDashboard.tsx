@@ -3,19 +3,19 @@ import {
   Search, MessageSquare, ArrowRightLeft, Star, 
   Filter, ShoppingBag, Sparkles, TrendingUp, 
   Zap, ChevronRight, Gift, Tag, Repeat, X, ArrowLeft, Heart, ShieldCheck, Send, MapPin, Clock,
-  Loader2
+  Loader2, ImageIcon
 } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { getAllItems } from '../services/item'; // 1. Import Service
+import { getAllItems } from '../services/item';
 
 // --- TYPES ---
 interface Item {
-  id: string; // Changed to string for MongoDB _id
+  id: string;
   name: string;
   price: number;
-  image: string; 
-  isImageFile: boolean; // New flag: True = URL, False = Emoji
+  images: string[]; // UPDATED: Array of strings
+  isImageFile: boolean;
   seller: string;
   location: string;
   rating: number;
@@ -29,46 +29,52 @@ interface Item {
 
 const TradingPlatform = () => {
   // --- STATE ---
-  const [items, setItems] = useState<Item[]>([]); // Data from API
-  const [loading, setLoading] = useState(true);   // Loading state
+  const [items, setItems] = useState<Item[]>([]); 
+  const [loading, setLoading] = useState(true);
   const [filterMode, setFilterMode] = useState<'all' | 'sell' | 'exchange' | 'charity'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [newMessage, setNewMessage] = useState('');
   
-  // Chat State
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  // NEW: Track active image in Detail View
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const [newMessage, setNewMessage] = useState('');
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'seller', text: 'Hi there! Thanks for viewing my listing. Let me know if you have questions!', time: '10:05 AM' }
+    { sender: 'seller', text: 'Hi there! Thanks for viewing my listing.', time: '10:05 AM' }
   ]);
 
-  // --- FETCH DATA (useEffect) ---
+  // --- FETCH DATA ---
   useEffect(() => {
     const fetchItems = async () => {
       try {
         setLoading(true);
         const response = await getAllItems(); 
         
-        // Map Backend Data (MongoDB) to UI Structure
-        const mappedItems = response.data.map((backendItem: any) => ({
-          id: backendItem._id,
-          name: backendItem.title,
-          price: backendItem.price,
-          // Handle Image Logic: URL or Emoji Fallback
-          image: backendItem.images && backendItem.images.length > 0 
-            ? `http://localhost:5000/${backendItem.images[0].replace(/\\/g, '/')}` // Fix Windows paths if necessary
-            : getCategoryEmoji(backendItem.category),
-          isImageFile: backendItem.images && backendItem.images.length > 0,
-          seller: backendItem.userId?.fullName || 'Unknown User',
-          location: 'Global', // Placeholder until location is added to backend
-          rating: 5.0, 
-          condition: backendItem.condition,
-          mode: backendItem.mode.toLowerCase(), // Convert "SELL" to "sell"
-          seeking: backendItem.seeking,
-          category: backendItem.category,
-          description: backendItem.description,
-          postedAt: formatTimeAgo(new Date(backendItem.createdAt))
-        }));
+        const mappedItems = response.data.map((backendItem: any) => {
+          // Check for images array
+          const hasImages = backendItem.images && backendItem.images.length > 0;
+          
+          return {
+            id: backendItem._id || backendItem.id,
+            name: backendItem.title,
+            price: backendItem.price,
+            
+            // Store ALL images. If none, store array with 1 emoji string.
+            images: hasImages ? backendItem.images : [getCategoryEmoji(backendItem.category)],
+            isImageFile: hasImages,
+            
+            seller: backendItem.userId?.fullName || 'Unknown User',
+            location: 'Colombo, LK', 
+            rating: 5.0, 
+            condition: backendItem.condition,
+            mode: backendItem.mode ? backendItem.mode.toLowerCase() : 'sell',
+            seeking: backendItem.seeking,
+            category: backendItem.category,
+            description: backendItem.description,
+            postedAt: formatTimeAgo(new Date(backendItem.createdAt))
+          };
+        });
 
         setItems(mappedItems);
       } catch (error) {
@@ -81,9 +87,9 @@ const TradingPlatform = () => {
     fetchItems();
   }, []);
 
-  // Helper: Get Emoji if no image uploaded
+  // --- HELPERS ---
   const getCategoryEmoji = (category: string) => {
-    const cat = category.toLowerCase();
+    const cat = category ? category.toLowerCase() : '';
     if (cat.includes('tech') || cat.includes('electron')) return '💻';
     if (cat.includes('camera')) return '📷';
     if (cat.includes('music')) return '🎸';
@@ -93,23 +99,19 @@ const TradingPlatform = () => {
     return '📦';
   };
 
-  // Helper: Format Date
   const formatTimeAgo = (date: Date) => {
+    if(isNaN(date.getTime())) return 'Recently';
     const now = new Date();
-    const diffInHours = Math.abs(now.getTime() - date.getTime()) / 36e5;
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
+    const diff = Math.abs(now.getTime() - date.getTime()) / 36e5;
+    if (diff < 1) return 'Just now';
+    if (diff < 24) return `${Math.floor(diff)}h ago`;
+    return `${Math.floor(diff / 24)}d ago`;
   };
 
-  // Scroll to bottom of chat
   useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
+    if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
   }, [chatMessages, selectedItem]);
 
-  // --- FILTERS ---
   const filteredListings = useMemo(() => {
     return items.filter(item => {
       const matchesMode = filterMode === 'all' || item.mode === filterMode;
@@ -119,7 +121,6 @@ const TradingPlatform = () => {
     });
   }, [items, filterMode, searchQuery]);
 
-  // --- HANDLERS ---
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
     setChatMessages(prev => [...prev, { sender: 'buyer', text: newMessage, time: 'Just now' }]);
@@ -143,6 +144,12 @@ const TradingPlatform = () => {
         default: return 'bg-slate-500';
     }
   }
+
+  // Handle opening item and resetting image index
+  const handleOpenItem = (item: Item) => {
+      setSelectedItem(item);
+      setActiveImageIndex(0); // Reset to first image
+  };
 
   return (
     <div className="min-h-screen bg-slate-50/50 flex flex-col font-sans text-slate-800">
@@ -190,7 +197,6 @@ const TradingPlatform = () => {
       <main className="flex-grow max-w-7xl mx-auto w-full -mt-20 px-4 pb-20 relative z-20">
         
         {loading ? (
-             // --- LOADING STATE ---
              <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl shadow-xl min-h-[400px]">
                 <Loader2 size={48} className="text-indigo-600 animate-spin mb-4" />
                 <p className="text-slate-500 font-medium">Loading items...</p>
@@ -200,7 +206,7 @@ const TradingPlatform = () => {
           <div className="animate-in fade-in zoom-in-95 duration-300 bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col lg:flex-row min-h-[700px]">
             
             {/* LEFT: Item Info */}
-            <div className="lg:w-7/12 p-8 lg:p-12 border-r border-slate-100 relative">
+            <div className="lg:w-7/12 p-8 lg:p-12 border-r border-slate-100 relative overflow-y-auto max-h-[90vh] scrollbar-hide">
                <button 
                 onClick={() => setSelectedItem(null)}
                 className="absolute top-8 left-8 p-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition shadow-sm z-10"
@@ -209,22 +215,17 @@ const TradingPlatform = () => {
               </button>
 
               <div className="flex flex-col h-full">
-                {/* Image Placeholder */}
-                <div className="relative aspect-video bg-slate-50 rounded-3xl flex items-center justify-center text-[8rem] mb-8 border border-slate-100 overflow-hidden">
-                    {/* CONDITIONAL RENDERING: Real Image vs Emoji */}
+                
+                {/* --- MAIN IMAGE (Interactive) --- */}
+                <div className="relative aspect-video bg-slate-50 rounded-3xl flex items-center justify-center text-[8rem] mb-4 border border-slate-100 overflow-hidden">
                     {selectedItem.isImageFile ? (
                         <img 
-                            src={selectedItem.image} 
+                            src={selectedItem.images[activeImageIndex]} // Use Active Index
                             alt={selectedItem.name} 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => {
-                                // Fallback if image fails to load
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerText = getCategoryEmoji(selectedItem.category);
-                            }}
+                            className="w-full h-full object-contain" 
                         />
                     ) : (
-                        <span>{selectedItem.image}</span>
+                        <span>{selectedItem.images[0]}</span>
                     )}
                     
                     <span className={`absolute top-4 left-4 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-lg ${getModeBadge(selectedItem.mode)}`}>
@@ -234,6 +235,25 @@ const TradingPlatform = () => {
                         <Heart size={20} />
                     </button>
                 </div>
+
+                {/* --- THUMBNAIL GALLERY --- */}
+                {selectedItem.isImageFile && selectedItem.images.length > 1 && (
+                    <div className="flex gap-3 mb-8 overflow-x-auto pb-2 scrollbar-hide">
+                        {selectedItem.images.map((img, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => setActiveImageIndex(idx)}
+                                className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${
+                                    activeImageIndex === idx 
+                                    ? 'border-indigo-600 ring-2 ring-indigo-100' 
+                                    : 'border-transparent opacity-70 hover:opacity-100'
+                                }`}
+                            >
+                                <img src={img} alt="thumbnail" className="w-full h-full object-cover" />
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Details */}
                 <div className="space-y-6">
@@ -246,7 +266,7 @@ const TradingPlatform = () => {
                             </div>
                         </div>
                         <div className="text-right">
-                             {selectedItem.mode === 'sell' && <p className="text-3xl font-black text-indigo-600">${selectedItem.price}</p>}
+                             {selectedItem.mode === 'sell' && <p className="text-3xl font-black text-indigo-600">LKR {selectedItem.price.toLocaleString()}</p>}
                              {selectedItem.mode === 'charity' && <p className="text-3xl font-black text-rose-500">FREE</p>}
                              {selectedItem.mode === 'exchange' && <p className="text-xl font-black text-amber-600 uppercase">Trade</p>}
                         </div>
@@ -383,14 +403,16 @@ const TradingPlatform = () => {
                   filteredListings.map((item) => (
                     <div 
                       key={item.id} 
-                      onClick={() => setSelectedItem(item)}
+                      onClick={() => handleOpenItem(item)}
                       className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full"
                     >
                       {/* Image Area */}
                       <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center text-6xl group-hover:scale-105 transition-transform duration-500 overflow-hidden">
+                        
+                        {/* Display First Image only in Grid */}
                         {item.isImageFile ? (
                              <img 
-                                src={item.image} 
+                                src={item.images[0]} 
                                 alt={item.name} 
                                 className="w-full h-full object-cover" 
                                 onError={(e) => {
@@ -399,8 +421,16 @@ const TradingPlatform = () => {
                                 }}
                              />
                         ) : (
-                             <span>{item.image}</span>
+                             <span>{item.images[0]}</span>
                         )}
+
+                        {/* Multiple Images Badge */}
+                        {item.isImageFile && item.images.length > 1 && (
+                            <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md text-white px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                                <ImageIcon size={10} /> +{item.images.length - 1}
+                            </div>
+                        )}
+
                         <div className={`absolute top-4 left-4 px-2.5 py-1 rounded-full text-[10px] font-black uppercase text-white tracking-wide ${getModeBadge(item.mode)}`}>
                           {item.mode}
                         </div>
@@ -415,7 +445,7 @@ const TradingPlatform = () => {
                         
                         <div className="mt-auto pt-4 border-t border-slate-50 flex justify-between items-center">
                           <div>
-                              {item.mode === 'sell' && <span className="text-xl font-black text-indigo-900">${item.price}</span>}
+                              {item.mode === 'sell' && <span className="text-xl font-black text-indigo-900">LKR {item.price.toLocaleString()}</span>}
                               {item.mode === 'charity' && <span className="text-sm font-black text-rose-500 bg-rose-50 px-2 py-1 rounded-md">FREE</span>}
                               {item.mode === 'exchange' && <span className="text-sm font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md">SWAP</span>}
                           </div>
