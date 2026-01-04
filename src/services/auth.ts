@@ -26,8 +26,7 @@ export const getMyDetails = async () => {
 };
 
 export const registerAdmin = async (data: {
-  firstName: string;
-  lastName: string;
+  fullName: string;
   email: string;
   password: string;
   role : string

@@ -88,7 +88,7 @@ const PostItem = () => {
     setError("");
     setLoading(true);
 
-    // 1. Validation
+    //Validation
     if (!form.title.trim() || !form.description.trim()) {
       setError("Title and Description are required.");
       setLoading(false);
@@ -102,7 +102,7 @@ const PostItem = () => {
     }
 
     try {
-      // 2. Upload Images to ImgBB
+      // Upload Images to ImgBB
       setLoadingText("Uploading photos...");
       
       // Map every file to an upload promise
@@ -111,7 +111,7 @@ const PostItem = () => {
       // Wait for all uploads to finish
       const imageUrls = await Promise.all(uploadPromises);
 
-      // 3. Send Data to Backend
+      // Send Data to Backend
       setLoadingText("Creating listing...");
 
       // Prepare JSON payload (No more FormData needed)
@@ -128,9 +128,13 @@ const PostItem = () => {
       };
 
       const res = await createItem(itemData);
-      
-      setSuccess(true);
-      setTimeout(() => navigate('/dashboard'), 1500);
+
+      if (res.success) {
+        setSuccess(true);
+        setTimeout(() => navigate('/dashboard'), 1500);
+      } else {
+        setError("Failed to create listing. Please try again.");
+      }
 
     } catch (err: any) {
       console.error(err);
