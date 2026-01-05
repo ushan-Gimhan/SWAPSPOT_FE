@@ -266,7 +266,7 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* RIGHT MAIN AREA */}
+          {/*RIGHT MAIN AREA */}
           <div className={`flex-1 flex flex-col bg-slate-50/50 w-full h-full absolute md:relative transition-transform duration-300 ${showChatOnMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
             
             {selectedChat ? (

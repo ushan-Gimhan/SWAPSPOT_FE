@@ -63,6 +63,7 @@ export default function Router() {
         <Route path="/post" element={<PostItem />} />
 
         <Route path="/messages" element={<Massege />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
