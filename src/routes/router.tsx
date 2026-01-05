@@ -10,6 +10,7 @@ const UserProfile = lazy(() => import("../pages/UserProfile"));
 const PostItem = lazy(() => import("../pages/PostItem"));
 const Massege = lazy(() => import("../pages/massege"));
 const AdminDashboard = lazy(() => import("../pages/adminDashboard"));
+const LoginSuccess = lazy(() => import("../pages/LoginSuccess"));
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user} = useAuth();
@@ -64,6 +65,8 @@ export default function Router() {
 
         <Route path="/messages" element={<Massege />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+        <Route path="/login-success" element={<LoginSuccess />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

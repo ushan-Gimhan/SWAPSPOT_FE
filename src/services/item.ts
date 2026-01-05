@@ -29,7 +29,7 @@ export const getAllItems = async (params?: {
   mode?: string;
 }) => {
   // Axios accepts 'params' which automatically converts to ?page=1&limit=10...
-  const res = await api.get('/items', { params });
+  const res = await api.get('/items/users-item', { params });
   return res.data;
 };
 
