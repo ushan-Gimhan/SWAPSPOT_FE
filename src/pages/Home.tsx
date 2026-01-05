@@ -159,12 +159,12 @@ const LandingPage = () => {
                <span className="text-xs font-bold text-gray-200 uppercase tracking-widest">#1 Marketplace 2026</span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight leading-tight">
-              Buy, Sell, and Trade <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-400">
-                 Anything, Anywhere.
-              </span>
-            </h1>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[1.1]">
+              Buy, Sell, Trade and Donate <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-400">
+              Anything, Anywhere.
+            </span>
+          </h1>
             <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto font-light leading-relaxed">
               Join the world's fastest-growing community. Safe payments, verified users, and instant chats.
             </p>

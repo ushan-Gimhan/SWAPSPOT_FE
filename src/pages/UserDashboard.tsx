@@ -14,7 +14,7 @@ import { accessChat, fetchMessages, sendMessage } from '../services/chat';
 const ENDPOINT = "http://localhost:5000"; 
 var socket: any;
 
-// --- TYPES ---
+//TYPES
 interface Item {
   id: string;
   name: string;
@@ -44,7 +44,7 @@ interface Message {
 const TradingPlatform = () => {
   const { user } = useAuth();
   
-  // --- STATE ---
+  //STATE
   const [items, setItems] = useState<Item[]>([]); 
   const [loading, setLoading] = useState(true);
   
@@ -60,14 +60,14 @@ const TradingPlatform = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  // --- CHAT STATE ---
+  //CHAT STATE
   const [currentChat, setCurrentChat] = useState<any>(null); 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // --- 1. SOCKET SETUP ---
+  //SOCKET SETUP
   useEffect(() => {
     if (!user) return;
 
@@ -80,7 +80,7 @@ const TradingPlatform = () => {
     };
   }, [user]);
 
-  // --- 2. LISTEN FOR INCOMING MESSAGES ---
+  //LISTEN FOR INCOMING MESSAGES
   useEffect(() => {
     if (!socket) return;
 
@@ -99,7 +99,7 @@ const TradingPlatform = () => {
     };
   }, [currentChat]);
 
-  // --- 3. FETCH ITEMS (Standard Logic) ---
+  //FETCH ITEMS (Standard Logic)
   useEffect(() => {
     fetchItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -154,7 +154,7 @@ const TradingPlatform = () => {
     }
   };
 
-  // --- 4. START CHAT LOGIC ---
+  //START CHAT LOGIC
   const handleItemClick = async (item: Item) => {
     setSelectedItem(item);
     setActiveImageIndex(0);
@@ -182,7 +182,7 @@ const TradingPlatform = () => {
     }
   };
 
-  // --- 5. SEND MESSAGE LOGIC (Fixed Duplicate Issue) ---
+  //SEND MESSAGE LOGIC (Fixed Duplicate Issue)
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !currentChat) return;
 
@@ -193,7 +193,7 @@ const TradingPlatform = () => {
         // Call Backend API
         const data = await sendMessage(currentChat._id, content);
         
-        // 🛑 FIX: DO NOT manually add to messages here.
+        // DO NOT manually add to messages here.
         // The socket listener above will receive the "new message" event 
         // from the backend (for both sender and receiver) and add it.
         
@@ -212,7 +212,7 @@ const TradingPlatform = () => {
     }, 100);
   };
 
-  // --- 6. CHECK SENDER HELPER (Fixed Alignment Issue) ---
+  //CHECK SENDER HELPER (Fixed Alignment Issue)
   const isMyMessage = (msg: Message) => {
       if (!user) return false;
       // Handle populated object or string ID
@@ -220,7 +220,7 @@ const TradingPlatform = () => {
       return senderId === user._id;
   };
 
-  // --- HELPERS ---
+  //HELPERS
   const handleSearch = () => { setCurrentPage(1); fetchItems(); };
   const handleFilterChange = (mode: any) => { setFilterMode(mode); setCurrentPage(1); };
   const handlePageChange = (newPage: number) => {
@@ -260,9 +260,14 @@ const TradingPlatform = () => {
 
       {/* HERO SECTION */}
       <section className="relative bg-[#1e1b4b] text-white pt-16 pb-32 px-4 overflow-hidden">
-        {/* ... (Keep Hero Section Same) ... */}
+        {/*Keep Hero Section Same*/}
         <div className="max-w-5xl mx-auto relative z-10 text-center space-y-8">
-             <h1 className="text-5xl md:text-7xl font-black">Buy, Sell, and Trade</h1>
+             <h1 className="text-3xl md:text-5xl font-black text-white tracking-tighter leading-[1.1]">
+              Buy, Sell, Trade and Donate <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-400">
+              Anything, Anywhere.
+            </span>
+            </h1>
              <div className="max-w-2xl mx-auto relative flex items-center bg-white rounded-2xl p-2">
                 <Search className="ml-4 text-slate-400" size={24} />
                 <input type="text" placeholder="Search items..." className="w-full px-4 py-3 text-slate-800 bg-transparent outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()} />
@@ -281,7 +286,7 @@ const TradingPlatform = () => {
              </div>
         ) : selectedItem ? (
           
-          // --- DETAIL VIEW WITH CHAT ---
+          // DETAIL VIEW WITH CHAT
           <div className="animate-in fade-in zoom-in-95 duration-300 bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col lg:flex-row min-h-[700px]">
             
             {/* LEFT SIDE: ITEM DETAILS */}
@@ -289,7 +294,7 @@ const TradingPlatform = () => {
                <button onClick={() => setSelectedItem(null)} className="absolute top-8 left-8 p-3 bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition shadow-sm z-10 group">
                  <ArrowLeft size={20} className="text-slate-600" />
                </button>
-               {/* ... (Image & Description - Keep Same) ... */}
+               {/*  (Image & Description - Keep Same)  */}
                <div className="flex flex-col h-full mt-12 lg:mt-0">
                   <div className="relative aspect-video bg-slate-50 rounded-[2rem] flex items-center justify-center text-[8rem] mb-6 border border-slate-100 overflow-hidden">
                      {selectedItem.isImageFile ? <img src={selectedItem.images[activeImageIndex]} className="w-full h-full object-contain" alt="" /> : <span>{selectedItem.images[0]}</span>}
@@ -325,7 +330,7 @@ const TradingPlatform = () => {
                         <div className="h-full flex items-center justify-center text-slate-400 font-bold">Start the conversation!</div>
                    ) : (
                        messages.map((msg, i) => {
-                          // 👇 FIX: Use robust helper to determine sender
+                          // Use robust helper to determine sender
                           const isMe = isMyMessage(msg); 
                           
                           return (

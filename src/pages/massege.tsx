@@ -47,7 +47,7 @@ const Messages = () => {
   const { user } = useAuth();
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  // --- STATE ---
+  //STATE
   const [chats, setChats] = useState<ChatType[]>([]);
   const [selectedChat, setSelectedChat] = useState<ChatType | null>(null);
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
@@ -56,7 +56,7 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
 
-  // --- 1. SETUP SOCKET & FETCH INITIAL CHATS ---
+  //SETUP SOCKET & FETCH INITIAL CHATS
   useEffect(() => {
     if (!user?._id) return; // Guard against undefined user
 
@@ -79,7 +79,7 @@ const Messages = () => {
     };
   }, [user?._id]);
 
-  // --- 2. SOCKET LISTENER ---
+  // SOCKET LISTENER
   useEffect(() => {
     if (!socket) return;
 
@@ -116,7 +116,7 @@ const Messages = () => {
     return () => { socket.off("message received", handleMessageReceived); };
   }, [selectedChat?._id]);
 
-  // --- HELPERS ---
+  //HELPERS
   const scrollToBottom = () => setTimeout(() => chatScrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
 
   const getSenderObj = (chat: ChatType | null) => {
@@ -145,7 +145,7 @@ const Messages = () => {
     } catch (e) { return ""; }
   };
 
-  // --- HANDLERS ---
+  //HANDLERS
   const handleChatSelect = async (chat: ChatType) => {
     if (!chat?._id) return; 
 
@@ -211,7 +211,7 @@ const Messages = () => {
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 h-[calc(100vh-80px)]">
         <div className="bg-white rounded-[2rem] shadow-xl border border-slate-200 overflow-hidden flex h-full relative">
           
-          {/* --- LEFT SIDEBAR --- */}
+          {/*LEFT SIDEBAR */}
           <div className={`w-full md:w-[350px] lg:w-[400px] border-r border-slate-100 flex flex-col bg-white z-10 absolute md:relative h-full transition-transform duration-300 ${showChatOnMobile ? '-translate-x-full md:translate-x-0' : 'translate-x-0'}`}>
             <div className="p-6 border-b border-slate-50">
               <h1 className="text-2xl font-black text-slate-900 mb-4">Messages</h1>
@@ -266,7 +266,7 @@ const Messages = () => {
             </div>
           </div>
 
-          {/* --- RIGHT MAIN AREA --- */}
+          {/* RIGHT MAIN AREA */}
           <div className={`flex-1 flex flex-col bg-slate-50/50 w-full h-full absolute md:relative transition-transform duration-300 ${showChatOnMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
             
             {selectedChat ? (

@@ -9,6 +9,7 @@ const UserDashboard = lazy(() => import("../pages/UserDashboard"));
 const UserProfile = lazy(() => import("../pages/UserProfile"));
 const PostItem = lazy(() => import("../pages/PostItem"));
 const Massege = lazy(() => import("../pages/massege"));
+const AdminDashboard = lazy(() => import("../pages/adminDashboard"));
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user} = useAuth();
