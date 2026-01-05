@@ -227,11 +227,23 @@ src/
 
 > (Add screenshots here)
 
-* Home Page
-* Item Listing Page
-* Item Details + Chat
-* User Dashboard
-* Admin Dashboard
+## 📸 Screenshots
+
+### 🏠 Home Page
+![Home Page](screenshots/home.png)
+
+### 📦 Item Listing Page
+![Item Listing Page](screenshots/PostItem.png)
+
+### 💬 Item Details & Chat
+![Item Details and Chat](screenshots/item-details-chat.png)
+
+### 👤 User Dashboard
+![User Dashboard](screenshots/UserDashboard.png)
+
+### 🛠 Admin Dashboard
+![Admin Dashboard](screenshots/admin-dashboard.png)
+
 
 ---
 
