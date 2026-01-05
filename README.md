@@ -1,16 +1,3 @@
-Got it 😊
-You want a **proper, professional README.md** for your **new project**, written **before submission**, based on:
-
-* Your **old MiniTasker README style**
-* The **new project details** you provided
-* Your **actual frontend structure**
-* Your **SwapSpot_FE GitHub repo**
-* MERN + TypeScript + AI focus
-
-Below is a **complete, clean, academic-ready README** you can **copy-paste directly** into `README.md`.
-
----
-
 # 🌐 TradeHub – Item-to-Item Selling & Trading Platform
 
 ![React](https://img.shields.io/badge/React-TypeScript-blue)
