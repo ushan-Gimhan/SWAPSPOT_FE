@@ -19,32 +19,46 @@ const LoginPage = ({ setView }: LoginProps) => {
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
+  e.preventDefault();
+  setError("");
 
-    try {
-      const res = await login(email, password);
+  try {
+    const res = await login(email, password);
+    const userData = res?.data; // Based on your JSON: res.data.roles exists
 
-      if (!res?.data?.accessToken || !res?.data?.refreshToken) {
-        throw new Error("Invalid login response");
-      }
+    if (!userData?.accessToken) throw new Error("Invalid response");
 
-      localStorage.setItem("accessToken", res.data.accessToken);
-      localStorage.setItem("refreshToken", res.data.refreshToken);
+    // 1. Save tokens immediately
+    localStorage.setItem("accessToken", userData.accessToken);
+    localStorage.setItem("refreshToken", userData.refreshToken);
 
-      const me = await getMyDetails();
+    // 2. IMPORTANT: Get the roles from the response directly
+    const rawRoles = userData.roles; 
+    const rolesArray = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
 
-      setUser({
-        email: me.email,
-        role: Array.isArray(me.role) ? me.role : [me.role],
-      });
+    // 3. Update the global state
+    setUser({
+      email: userData.email,
+      fullName: userData.fullName || "User",
+      role: rolesArray, // Ensure your Context uses 'role' (singular) as the key
+    });
 
+    // 4. LOG FOR DEBUGGING - Check your browser console!
+    console.log("Roles found:", rolesArray);
+
+    // 5. REDIRECT - Use the local rolesArray variable, not the state
+    if (rolesArray.includes("ADMIN")) {
+      console.log("Redirecting to Admin...");
+      navigate("/admin/dashboard");
+    } else {
+      console.log("Redirecting to User...");
       navigate("/dashboard");
-      setView?.("home");
-    } catch (err) {
-      setError("Invalid email or password");
     }
-  };
+
+  } catch (err: any) {
+    setError("Invalid email or password");
+  }
+};
 
   // ✅ GOOGLE LOGIN
   const handleGoogleLogin = () => {

@@ -49,3 +49,13 @@ export const refreshTokens = async (refreshToken: string) => {
   const res = await api.post('/auth/refresh', { token: refreshToken })
   return res.data
 }
+
+export const deleteUser = async (id: string) => {
+  const res = await api.delete(`/users/${id}`);
+  return res.data;
+}
+
+export const updateUserStatus = async (id: string, status: string) => {
+  const res = await api.put(`/users/${id}/status`, { status });
+  return res.data;
+}

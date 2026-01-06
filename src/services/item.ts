@@ -12,6 +12,11 @@ export interface CreateItemPayload {
   aiSuggestedPrice?: number;
 }
 
+export const getAllItemsForAdmin = async () => {
+  const res = await api.get('/items/allItems');
+  return res.data;
+}
+
 // Create a new item (Handles Images + Data)
 export const createItem = async (data: any) => {
   // Axios automatically detects that 'data' is a JSON object and sets 
@@ -32,6 +37,7 @@ export const getAllItems = async (params?: {
   const res = await api.get('/items/users-item', { params });
   return res.data;
 };
+
 
 // Get a single item by ID
 export const getItemById = async (id: string) => {
