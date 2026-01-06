@@ -236,7 +236,7 @@ src/
 ![SignUp page](screenshots/SignUp.png)
 
 ### LogIn Page
-![LogIn page](screenshots/SignIn.png)
+![LogIn page](screenshots/login.png)
 
 ### 👤 User Dashboard
 ![User Dashboard](screenshots/UserDashboard.png)
