@@ -232,17 +232,23 @@ src/
 ### 🏠 Home Page
 ![Home Page](screenshots/home.png)
 
-### 📦 Item Listing Page
-![Item Listing Page](screenshots/PostItem.png)
+### Sign Up Page
+![SignUp page](screenshots/SignUp.png)
 
-### 💬 Item Details & Chat
-![Item Details and Chat](screenshots/item-details-chat.png)
+### LogIn Page
+![LogIn page](screenshots/SignIn.png)
 
 ### 👤 User Dashboard
 ![User Dashboard](screenshots/UserDashboard.png)
 
+### 📦 Item Listing Page
+![Item Listing Page](screenshots/PostItem.png)
+
+### 💬 Item Details & Chat
+![Item Details and Chat](screenshots/ItemDetails&Chat.png)
+
 ### 🛠 Admin Dashboard
-![Admin Dashboard](screenshots/admin-dashboard.png)
+![Admin Dashboard](screenshots/adminDashBoard.png)
 
 
 ---
