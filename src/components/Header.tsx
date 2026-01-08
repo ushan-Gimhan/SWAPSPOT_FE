@@ -101,6 +101,7 @@ const Header = () => {
             <ShoppingBag size={20} className="text-indigo-500"/> Market
           </Link>
 
+        
           <Link 
             to="/post" 
             onClick={() => setIsMobileMenuOpen(false)}
