@@ -5,27 +5,26 @@ export interface CreateItemPayload {
   description: string;
   category: string;
   condition: string;
-  mode: 'SELL' | 'EXCHANGE' | 'CHARITY' | string; // Matches your Enums
+  mode: 'SELL' | 'EXCHANGE' | 'CHARITY' | string;
   price: number | string;
   seeking: string;
-  images: string[]; // Array of ImgBB URLs
+  images: string[];
   aiSuggestedPrice?: number;
 }
 
+// --- Admin: Get all items ---
 export const getAllItemsForAdmin = async () => {
   const res = await api.get('/items/allItems');
   return res.data;
-}
+};
 
-// Create a new item (Handles Images + Data)
-export const createItem = async (data: any) => {
-  // Axios automatically detects that 'data' is a JSON object and sets 
-  // 'Content-Type': 'application/json' for you.
+// --- Create a new item ---
+export const createItem = async (data: CreateItemPayload) => {
   const res = await api.post('/items/create', data);
   return res.data;
 };
 
-// Update function signature to accept params object
+// --- Get all items (with filters) ---
 export const getAllItems = async (params?: {
   page?: number;
   limit?: number;
@@ -33,54 +32,70 @@ export const getAllItems = async (params?: {
   category?: string;
   mode?: string;
 }) => {
-  // Axios accepts 'params' which automatically converts to ?page=1&limit=10...
   const res = await api.get('/items/users-item', { params });
   return res.data;
 };
 
-
-// Get a single item by ID
+// --- Get single item ---
 export const getItemById = async (id: string) => {
   const res = await api.get(`/items/${id}`);
   return res.data;
 };
 
-// Update an item (Supports FormData if updating images, or JSON if just text)
+// --- General update ---
 export const updateItem = async (id: string, data: Partial<CreateItemPayload>) => {
-  const res = await api.put(`/items/${id}`, data);
+  const res = await api.put(`/items/${id}`, data); // matches backend route
   return res.data;
 };
 
-export const getMyItems = async () => {
-  const res = await api.get('/items/my-items');
+// --- Update only status ---
+export const updateItemStatus = async (id: string, status: 'available' | 'pending' | 'sold') => {
+  const res = await api.put(`/items/updateStatus/${id}`, { status }); // matches backend
   return res.data;
 };
 
-// Delete an item
+// --- Delete item ---
 export const deleteItem = async (id: string) => {
   const res = await api.delete(`/items/${id}`);
   return res.data;
 };
 
+// --- Get my items ---
+export const getMyItems = async () => {
+  const res = await api.get('/items/my-items');
+  return res.data;
+};
+
+// --- Get user-specific items ---
 export const getUserItems = async (userId: string) => {
   const res = await api.get(`/items/user/${userId}`);
   return res.data;
-}
-
-
-export const getAiPriceSuggestion = async (
-  title: string, 
-  category: string, 
-  condition: string, 
-  description: string,
-  imageUrl?: string // The ImgBB URL
-) => {
-  const res = await api.post('/items/ai-price', { 
-    title, 
-    category, 
-    condition, 
-    description, 
-    imageUrl 
-  });
-  return res.data.price; 
 };
+
+// --- AI price suggestion ---
+export const getAiPriceSuggestion = async (
+  title: string,
+  category: string,
+  condition: string,
+  description: string,
+  imageUrl?: string
+) => {
+  const res = await api.post('/items/ai-price', { title, category, condition, description, imageUrl });
+  return res.data.price;
+};
+
+
+export const createUserItemReport = async (items: any[]) => {
+  try {
+    const res = await api.post("/items/createReports", { items }, {
+      responseType: "blob", // important for PDF download
+    });
+    return res.data;
+  } catch (err) {
+    console.error("Error generating item report:", err);
+    throw err;
+  }
+};
+
+
+

@@ -3,6 +3,7 @@ import Footer from "../components/Footer";
 import { register } from "../services/auth";  
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 interface SignUpProps {
   setView?: (view: string) => void;
@@ -13,48 +14,78 @@ const SignUp = ({ setView }: SignUpProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
+  // Helper for Success Toast
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
+  });
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
     setLoading(true);
+
+    // Show loading alert
+    Swal.fire({
+      title: 'Creating Account...',
+      text: 'Please wait while we set up your profile.',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
 
     try {
       const response = await register(fullName, email, password, "USER");
-      setSuccess(response.message);
+      
+      Swal.close();
+
+      // Show Success Modal
+      await Swal.fire({
+        icon: 'success',
+        title: 'Registration Successful!',
+        text: response.message || 'Welcome to TradeHub!',
+        confirmButtonColor: '#4f46e5',
+      });
+
+      // Clear inputs
       setFullName("");
       setEmail("");
       setPassword("");
 
-      setTimeout(() => {
-        if (typeof setView === "function") {
-          setView("login");
-        } else {
-          navigate("/login");
-        }
-      }, 2000);
+      // Redirect
+      if (typeof setView === "function") {
+        setView("login");
+      } else {
+        navigate("/login");
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Registration failed!");
+      Swal.close();
+      
+      // Show Error Modal
+      Swal.fire({
+        icon: 'error',
+        title: 'Registration Failed',
+        text: err?.response?.data?.message || "Something went wrong. Please try again.",
+        confirmButtonColor: '#4f46e5',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // --- GOOGLE SIGN UP METHOD ---
   const handleGoogleSignUp = () => {
-    // Redirects to your backend Google Auth route
     window.location.href = "http://localhost:5000/api/v1/auth/google";
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden font-sans">
       
       {/* Back Button */}
       <button 
@@ -81,9 +112,6 @@ const SignUp = ({ setView }: SignUpProps) => {
           </div>
 
           <form className="space-y-5" onSubmit={handleSignUp}>
-            {error && <div className="text-red-600 text-sm text-center font-medium bg-red-50 p-2 rounded-lg">{error}</div>}
-            {success && <div className="text-green-600 text-sm text-center font-medium bg-green-50 p-2 rounded-lg">{success}</div>}
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">Full Name</label>
               <input
@@ -138,7 +166,6 @@ const SignUp = ({ setView }: SignUpProps) => {
             </button>
           </form>
 
-          {/* --- GOOGLE SIGN UP OPTION --- */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-gray-100"></span>

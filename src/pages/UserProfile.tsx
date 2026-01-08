@@ -1,23 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, Bell, Heart, Shield, Camera, Trash2, Save, ShoppingBag, 
-  Loader2, AlertCircle, Package, Check, Eye, EyeOff, Lock, Key, ArrowLeft, MapPin, Clock, Tag
+  Loader2, AlertCircle, Package, Check, Eye, ArrowLeft, MapPin, Clock, Tag
 } from 'lucide-react';
+import Swal from 'sweetalert2';
+
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { useAuth } from '../context/authContext';
 
 // Services
 import { getMyItems, deleteItem } from '../services/item';
-import { getUserProfile, updateUserProfile, changeUserPassword } from '../services/profile';
+import { getUserProfile, updateUserProfile } from '../services/profile';
 import { uploadToImgBB } from '../services/imgbb'; 
 
 interface MyItem {
   id: string;
   title: string;
   price: number;
-  image: string; // Single main image for list
-  images: string[]; // All images for detail view
+  image: string;
+  images: string[];
   mode: string;
   isActive: boolean;
   createdAt: string;
@@ -39,7 +41,6 @@ const ManageProfile = () => {
   const [myItems, setMyItems] = useState<MyItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [itemError, setItemError] = useState("");
-  // 👇 State for selected item detail view
   const [selectedListing, setSelectedListing] = useState<MyItem | null>(null);
 
   // Profile State
@@ -51,16 +52,16 @@ const ManageProfile = () => {
     avatar: '',
   });
 
-  // Password State
-  const [security, setSecurity] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+  // Toast configuration for quick notifications
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000,
+    timerProgressBar: true,
   });
-  const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' });
-  const [showPassword, setShowPassword] = useState({ current: false, new: false, confirm: false });
 
-  // --- 1. Fetch Profile Data ---
+  //Fetch Profile Data
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -82,24 +83,28 @@ const ManageProfile = () => {
     fetchProfileData();
   }, [user]);
 
-  // --- 2. Image Upload ---
+  // Image Upload
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     setIsUploading(true);
     try {
       const imageUrl = await uploadToImgBB(file);
       setProfile(prev => ({ ...prev, avatar: imageUrl }));
-      alert("Image uploaded! Click 'Save Changes' to make it permanent.");
+      
+      Toast.fire({
+        icon: 'success',
+        title: 'Image uploaded! Click Save to finish.'
+      });
     } catch (error) {
-      console.error("Upload error", error);
-      alert("Error uploading image");
+      Swal.fire('Upload Failed', 'There was an error uploading your image.', 'error');
     } finally {
       setIsUploading(false);
     }
   };
 
-  // --- 3. Save Profile ---
+  //Save Profile
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -109,21 +114,20 @@ const ManageProfile = () => {
         location: profile.location,
         avatar: profile.avatar
       });
+      
+      Toast.fire({
+        icon: 'success',
+        title: 'Profile updated successfully'
+      });
+
       setTimeout(() => setIsSaving(false), 1200); 
     } catch (error) {
-      console.error("Update failed", error);
       setIsSaving(false);
-      alert("Failed to update profile.");
+      Swal.fire('Error', 'Failed to update profile settings.', 'error');
     }
   };
 
-  // --- 4. Password Change ---
-  const handlePasswordChange = async () => {
-    // ... (Keep existing password logic) ...
-    // For brevity, I'm assuming you keep the same logic as before
-  };
-
-  // --- Listings Logic ---
+  //listings Logic
   const fetchUserListings = async () => {
     setLoadingItems(true);
     try {
@@ -138,14 +142,13 @@ const ManageProfile = () => {
           category: item.category || 'General',
           description: item.description || 'No description provided.',
           condition: item.condition || 'Used',
-          location: 'Colombo, LK', // Placeholder if backend doesn't send location
+          location: 'Colombo, LK',
           createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Recently',
           image: (item.images && item.images.length > 0) ? item.images[0] : '',
           images: item.images || []
       }));
       setMyItems(userItems);
     } catch (err) {
-      console.error(err);
       setItemError("Failed to load your listings.");
     } finally {
       setLoadingItems(false);
@@ -153,12 +156,30 @@ const ManageProfile = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if(!window.confirm("Are you sure? This action cannot be undone.")) return;
-    try {
-      await deleteItem(id);
-      setMyItems(prev => prev.filter(item => item.id !== id));
-      if(selectedListing && selectedListing.id === id) setSelectedListing(null); // Close detail view if deleted
-    } catch (err) { console.error(err); }
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "This listing will be permanently removed.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#ef4444',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteItem(id);
+        setMyItems(prev => prev.filter(item => item.id !== id));
+        if(selectedListing && selectedListing.id === id) setSelectedListing(null);
+        
+        Toast.fire({
+          icon: 'success',
+          title: 'Listing deleted'
+        });
+      } catch (err) {
+        Swal.fire('Error', 'Failed to delete the item.', 'error');
+      }
+    }
   };
 
   useEffect(() => {
@@ -209,22 +230,13 @@ const ManageProfile = () => {
                 </button>
               ))}
             </div>
-            {/* Deactivate Button */}
-            <div className="p-8 bg-red-50 rounded-[2.5rem] border border-red-100">
-               <p className="text-red-900 font-black text-[10px] uppercase tracking-widest mb-3">System</p>
-               <button className="flex items-center gap-2 text-red-600 text-xs font-black hover:underline uppercase tracking-tighter">
-                 <Trash2 size={14} /> Deactivate Account
-               </button>
-            </div>
           </aside>
 
           {/* CONTENT AREA */}
           <div className="flex-1 bg-white rounded-[3.5rem] shadow-xl border border-gray-100 p-8 md:p-14 min-h-[600px]">
             
-            {/* PERSONAL TAB */}
             {activeTab === 'personal' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-10">
-                {/* ... (Keep your existing Personal Tab code) ... */}
                 <div className="flex flex-col md:flex-row items-center gap-8 pb-10 border-b border-gray-50">
                   <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                     <div className="w-32 h-32 bg-indigo-50 rounded-[2.8rem] flex items-center justify-center text-4xl font-black text-indigo-600 border-4 border-white shadow-xl overflow-hidden relative">
@@ -238,7 +250,7 @@ const ManageProfile = () => {
                     <p className="text-sm text-gray-400 font-bold">Recommended: Use a clear photo for better trust.</p>
                   </div>
                 </div>
-                {/* Inputs ... */}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
@@ -260,14 +272,10 @@ const ManageProfile = () => {
               </div>
             )}
 
-            {/* LISTINGS TAB */}
             {activeTab === 'listings' && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                    
-                    {/* IF ITEM SELECTED -> SHOW DETAIL VIEW */}
                     {selectedListing ? (
                         <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8 duration-300">
-                            {/* Back Button */}
                             <button 
                                 onClick={() => setSelectedListing(null)} 
                                 className="self-start flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-all mb-6"
@@ -276,7 +284,6 @@ const ManageProfile = () => {
                             </button>
 
                             <div className="flex flex-col lg:flex-row gap-8">
-                                {/* Image Section */}
                                 <div className="lg:w-1/2">
                                     <div className="aspect-[4/3] bg-gray-100 rounded-[2rem] overflow-hidden border border-gray-200 shadow-sm relative group">
                                         {selectedListing.image ? (
@@ -288,19 +295,8 @@ const ManageProfile = () => {
                                             {selectedListing.isActive ? 'Active' : 'Archived'}
                                         </div>
                                     </div>
-                                    {/* Thumbnails if any */}
-                                    {selectedListing.images && selectedListing.images.length > 1 && (
-                                        <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                                            {selectedListing.images.map((img, i) => (
-                                                <div key={i} className="w-16 h-16 rounded-xl border border-gray-200 overflow-hidden flex-shrink-0">
-                                                    <img src={img} className="w-full h-full object-cover" alt="" />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
 
-                                {/* Info Section */}
                                 <div className="lg:w-1/2 space-y-6">
                                     <div>
                                         <h2 className="text-3xl font-black text-gray-900 leading-tight">{selectedListing.title}</h2>
@@ -318,7 +314,6 @@ const ManageProfile = () => {
                                         <p className="text-gray-600 leading-relaxed text-sm">{selectedListing.description}</p>
                                     </div>
 
-                                    {/* Management Actions */}
                                     <div className="pt-6 border-t border-gray-100 flex gap-4">
                                         <button 
                                             onClick={() => handleDelete(selectedListing.id)}
@@ -334,7 +329,6 @@ const ManageProfile = () => {
                             </div>
                         </div>
                     ) : (
-                        // DEFAULT LIST VIEW
                         <>
                             <div className="flex items-center justify-between pb-6 border-b border-gray-50">
                                 <h3 className="text-xl font-black text-gray-900">Active Listings</h3>
@@ -357,7 +351,6 @@ const ManageProfile = () => {
                                     {myItems.map((item) => (
                                         <div 
                                             key={item.id} 
-                                            // 👇 Clicking the item sets it as selected
                                             onClick={() => setSelectedListing(item)}
                                             className="group flex items-center gap-6 p-5 rounded-[2rem] border border-gray-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/20 transition-all bg-white cursor-pointer"
                                         >
@@ -383,12 +376,8 @@ const ManageProfile = () => {
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }} 
                                                     className="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all" 
-                                                    title="Delete listing"
                                                 >
                                                     <Trash2 size={18} />
-                                                </button>
-                                                <button className="p-3 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
-                                                    <Eye size={18} />
                                                 </button>
                                             </div>
                                         </div>
@@ -398,12 +387,6 @@ const ManageProfile = () => {
                         </>
                     )}
                 </div>
-            )}
-
-            {/* SECURITY TAB (Keep existing) */}
-            {activeTab === 'security' && (
-                // ... (Paste your security tab code here from previous step)
-                <div className="p-4 text-center text-gray-400">Security Settings (Same as before)</div>
             )}
 
             {/* ACTION BUTTONS (Only for Personal Tab) */}

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Trash2, ExternalLink, Package, Tag, CheckCircle2, AlertCircle } from "lucide-react";
+import { Trash2, ExternalLink, Package, Tag, CheckCircle2, AlertCircle, FileText, Loader2 } from "lucide-react";
+import Swal from "sweetalert2";
+import { updateItemStatus, deleteItem ,createUserItemReport } from "../../services/item";
+const MySwal = Swal;
 
-// Item Type
 export interface Item {
   _id: string;
   title: string;
@@ -9,18 +11,108 @@ export interface Item {
   category: string;
   status: "available" | "pending" | "sold";
   sellerName: string;
-  sellerImage?: string; // seller profile image
-  images?: string[]; // multiple item images
+  sellerImage?: string;
+  images?: string[];
 }
-
-// Props for ItemManagement
 export interface ItemManagementProps {
   items: Item[];
   onDeleteItem: (id: string) => void;
+  onUpdateItemStatus: (id: string, status: Item["status"]) => void;
 }
 
-const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) => {
+const ItemManagement: React.FC<ItemManagementProps> = ({
+  items,
+  onDeleteItem,
+  onUpdateItemStatus,
+}) => {
   const [modalImage, setModalImage] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // --- Handle Status Change ---
+  const handleStatusChange = async (id: string, status: Item["status"]) => {
+    setLoadingStatus(id);
+    try {
+      await updateItemStatus(id, status);
+      onUpdateItemStatus(id, status);
+      MySwal.fire({
+        icon: "success",
+        title: "Status Updated",
+        text: `Item status updated to ${status}`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error(err);
+      MySwal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to update item status",
+      });
+    } finally {
+      setLoadingStatus(null);
+    }
+  };
+
+  // --- Handle Delete Item ---
+  const handleDelete = async (id: string) => {
+    const result = await MySwal.fire({
+      icon: "warning",
+      title: "Delete Item?",
+      text: "This action cannot be undone!",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteItem(id);
+        onDeleteItem(id);
+        MySwal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: "Item has been deleted.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (err) {
+        console.error(err);
+        MySwal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Failed to delete item",
+        });
+      }
+    }
+  };
+
+  // --- Handle PDF Report Generation ---
+  const handleDownloadPDF = async () => {
+  if (items.length === 0) return;
+  setIsGenerating(true);
+
+  try {
+    const pdfBlob = await createUserItemReport(items);
+
+    // create a download link
+    const url = window.URL.createObjectURL(new Blob([pdfBlob], { type: "application/pdf" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `Items_Report_${new Date().getTime()}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    MySwal.fire({ icon: "success", title: "PDF Generated!", timer: 1500, showConfirmButton: false });
+  } catch (err) {
+    console.error(err);
+    MySwal.fire({ icon: "error", title: "Failed to generate report" });
+  } finally {
+    setIsGenerating(false);
+  }
+};
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -29,6 +121,15 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">Market Inventory</h1>
           <p className="text-slate-500 mt-1 font-medium">Monitor and moderate all trade listings.</p>
         </div>
+
+        <button
+          onClick={handleDownloadPDF}
+          disabled={isGenerating || items.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg disabled:opacity-50"
+        >
+          {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <FileText size={18} />}
+          {isGenerating ? "Generating..." : "Export PDF Report"}
+        </button>
       </div>
 
       <div className="w-full bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 overflow-hidden">
@@ -56,7 +157,6 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
                   {/* Product Details */}
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      {/* Seller image */}
                       <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0">
                         {item.sellerImage ? (
                           <img src={item.sellerImage} alt={item.sellerName} className="object-cover w-full h-full" />
@@ -65,7 +165,6 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
                         )}
                       </div>
 
-                      {/* Item images carousel */}
                       <div className="flex gap-2">
                         {item.images && item.images.length > 0 ? (
                           item.images.map((img, idx) => (
@@ -84,7 +183,6 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
                         )}
                       </div>
 
-                      {/* Item text */}
                       <div>
                         <p className="font-bold text-slate-900 text-sm">{item.title}</p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-0.5">
@@ -109,9 +207,18 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
                     </span>
                   </td>
 
-                  {/* Status Badge */}
+                  {/* Status Dropdown */}
                   <td className="px-8 py-5">
-                    <StatusBadge status={item.status} />
+                    <select
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(item._id, e.target.value as Item["status"])}
+                      disabled={loadingStatus === item._id}
+                      className="text-sm font-bold border px-2 py-1 rounded"
+                    >
+                      <option value="available">Available</option>
+                      <option value="pending">Pending</option>
+                      <option value="sold">Sold</option>
+                    </select>
                   </td>
 
                   {/* Actions */}
@@ -121,7 +228,7 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
                         <ExternalLink size={16} />
                       </button>
                       <button
-                        onClick={() => onDeleteItem(item._id)}
+                        onClick={() => handleDelete(item._id)}
                         className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-rose-600 hover:shadow-lg transition-all"
                       >
                         <Trash2 size={16} />
@@ -148,7 +255,7 @@ const ItemManagement: React.FC<ItemManagementProps> = ({ items, onDeleteItem }) 
   );
 };
 
-// --- STATUS BADGE ---
+// --- Status Badge (optional) ---
 const StatusBadge = ({ status }: { status: Item["status"] }) => {
   const configs: Record<string, { color: string; icon: any }> = {
     available: { color: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: CheckCircle2 },

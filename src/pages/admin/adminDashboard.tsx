@@ -3,12 +3,8 @@ import { Users, Package, Flag, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/authContext";
 import AdminSidebar from "../../components/AdminSidebar";
 import Header from "../../components/AdminHeader";
-
-// Services
 import { getAllUsers, deleteUser, updateUserStatus } from "../../services/auth";
 import { getAllItemsForAdmin, deleteItem } from "../../services/item";
-
-// Lazy load management modules
 import type { UserManagementProps } from "../admin/UserManagement";
 import type { ItemManagementProps } from "../admin/ItemManagement";
 
@@ -128,8 +124,16 @@ const AdminDashboard = () => {
                 <UserManagement users={users} onDelete={handleDeleteUser} onUpdateStatus={handleUpdateUserStatus} />
               )}
               {activeTab === "items" && (
-                <ItemManagement items={items} onDeleteItem={handleDeleteItem} />
-              )}
+            <ItemManagement
+                items={items}
+                onDeleteItem={handleDeleteItem}
+                onUpdateItemStatus={(id, status) => {
+      // update frontend state after status change
+      setItems(prev => prev.map(i => (i._id === id ? { ...i, status } : i)));
+    }}
+  />
+)}
+
             </Suspense>
           )}
         </div>

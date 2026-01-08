@@ -2,8 +2,9 @@ import { useState } from "react";
 import Footer from "../components/Footer";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/authContext";
-import { login, getMyDetails } from "../services/auth";
+import { login } from "../services/auth";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 interface LoginProps {
   setView?: (view: string) => void;
@@ -18,55 +19,83 @@ const LoginPage = ({ setView }: LoginProps) => {
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
+  // Helper for Success Toast
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true,
+  });
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setError("");
+    e.preventDefault();
+    setError("");
 
-  try {
-    const res = await login(email, password);
-    const userData = res?.data; // Based on your JSON: res.data.roles exists
-
-    if (!userData?.accessToken) throw new Error("Invalid response");
-
-    // 1. Save tokens immediately
-    localStorage.setItem("accessToken", userData.accessToken);
-    localStorage.setItem("refreshToken", userData.refreshToken);
-
-    // 2. IMPORTANT: Get the roles from the response directly
-    const rawRoles = userData.roles; 
-    const rolesArray = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
-
-    // 3. Update the global state
-    setUser({
-      email: userData.email,
-      fullName: userData.fullName || "User",
-      role: rolesArray, // Ensure your Context uses 'role' (singular) as the key
+    // Optional: Show loading state
+    Swal.fire({
+      title: 'Authenticating...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
     });
 
-    // 4. LOG FOR DEBUGGING - Check your browser console!
-    console.log("Roles found:", rolesArray);
+    try {
+      const res = await login(email, password);
+      const userData = res?.data;
 
-    // 5. REDIRECT - Use the local rolesArray variable, not the state
-    if (rolesArray.includes("ADMIN")) {
-      console.log("Redirecting to Admin...");
-      navigate("/admin/dashboard");
-    } else {
-      console.log("Redirecting to User...");
-      navigate("/dashboard");
+      if (!userData?.accessToken) throw new Error("Invalid response");
+
+      // Save tokens
+      localStorage.setItem("accessToken", userData.accessToken);
+      localStorage.setItem("refreshToken", userData.refreshToken);
+
+      const rawRoles = userData.roles;
+      const rolesArray = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
+
+      // Update global state
+      setUser({
+        email: userData.email,
+        fullName: userData.fullName || "User",
+        role: rolesArray,
+      });
+
+      Swal.close(); // Close the loading modal
+
+      // Show Success Toast
+      await Toast.fire({
+        icon: 'success',
+        title: `Welcome back, ${userData.fullName || 'User'}!`
+      });
+
+      // Redirect
+      if (rolesArray.includes("ADMIN")) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+
+    } catch (err: any) {
+      Swal.close();
+      setError("Invalid email or password");
+      
+      // Show Error Modal
+      Swal.fire({
+        icon: 'error',
+        title: 'Login Failed',
+        text: 'The email or password you entered is incorrect.',
+        confirmButtonColor: '#4f46e5', // Indigo-600
+      });
     }
+  };
 
-  } catch (err: any) {
-    setError("Invalid email or password");
-  }
-};
-
-  // ✅ GOOGLE LOGIN
   const handleGoogleLogin = () => {
     window.location.href = "http://localhost:5000/api/v1/auth/google";
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-[#1e1b4b] relative overflow-hidden font-sans">
       {/* Back Button */}
       <button
         onClick={() => navigate("/")}
@@ -88,12 +117,6 @@ const LoginPage = ({ setView }: LoginProps) => {
           </div>
 
           <form className="space-y-6" onSubmit={handleLogin}>
-            {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border">
-                {error}
-              </div>
-            )}
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Email Address
@@ -139,15 +162,13 @@ const LoginPage = ({ setView }: LoginProps) => {
             </button>
           </form>
 
-          {/* Google Login */}
+          {/* Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm uppercase">
-              <span className="bg-white px-4 text-gray-400 font-medium">
-                Or continue with
-              </span>
+              <span className="bg-white px-4 text-gray-400 font-medium">Or continue with</span>
             </div>
           </div>
 
@@ -174,7 +195,6 @@ const LoginPage = ({ setView }: LoginProps) => {
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );
