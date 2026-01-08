@@ -51,11 +51,20 @@ export const refreshTokens = async (refreshToken: string) => {
 }
 
 export const deleteUser = async (id: string) => {
-  const res = await api.delete(`/users/${id}`);
+  const res = await api.delete(`/auth/${id}`);
+  return res.data;
+};
+
+// Update user status
+export const updateUserStatus = async (id: string, status: string) => {
+  const res = await api.put(`/auth/${id}/status`, { status }); 
+  return res.data;
+};
+
+
+export const createUserReports = async (users: any[]) => {
+  const res = await api.post('/auth/reports/users', { users }, { responseType: 'blob' });
   return res.data;
 }
 
-export const updateUserStatus = async (id: string, status: string) => {
-  const res = await api.put(`/users/${id}/status`, { status });
-  return res.data;
-}
+        

@@ -2,15 +2,15 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Camera, Tag, Heart, Sparkles, 
-  X, Plus, ChevronRight, DollarSign,
-  ArrowRight, ShieldCheck, Repeat, Image as ImageIcon,
+  X, Plus, ChevronRight, ArrowRight, ShieldCheck, Repeat, Image as ImageIcon,
   Loader2, CheckCircle
 } from 'lucide-react';
 import Header from '../components/Header'; 
 import Footer from '../components/Footer';
-// 1. Import the AI Service here
 import { createItem, getAiPriceSuggestion } from '../services/item'; 
 import { uploadToImgBB } from '../services/imgbb'; 
+import Swal from 'sweetalert2';
+import '@sweetalert2/theme-dark/dark.css';
 
 const PostItem = () => {
   const navigate = useNavigate();
@@ -21,12 +21,10 @@ const PostItem = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [isAILoading, setIsAILoading] = useState(false);
-  
-  // Feedback States
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState("Publishing..."); 
+  const [loadingText, setLoadingText] = useState("Publishing...");
   const [dragActive, setDragActive] = useState(false);
 
   const [form, setForm] = useState({
@@ -38,23 +36,20 @@ const PostItem = () => {
     description: ''
   });
 
-  // --- Handlers ---
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      processFiles(Array.from(e.target.files));
-    }
-  };
-
+  // --- Image Handlers ---
   const processFiles = (files: File[]) => {
     if (imageFiles.length + files.length > 5) {
-        setError("Maximum 5 images allowed.");
-        return;
+      setError("Maximum 5 images allowed.");
+      return;
     }
     const newPreviews = files.map(file => URL.createObjectURL(file));
     setImageFiles([...imageFiles, ...files]);
     setPreviews([...previews, ...newPreviews]);
     setError(""); 
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) processFiles(Array.from(e.target.files));
   };
 
   const removeImage = (index: number) => {
@@ -74,68 +69,62 @@ const PostItem = () => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) processFiles(Array.from(e.dataTransfer.files));
   };
 
-// --- REAL AI IMPLEMENTATION (Gemini Powered) ---
+  // --- AI Price Suggestion ---
   const getAISuggestion = async () => {
-    // 1. Basic Validation
     if (!form.title) { 
-        setError("Please enter a Title first so AI knows what to value."); 
-        return; 
+      setError("Please enter a Title first."); 
+      return; 
     }
 
     setIsAILoading(true);
-    setError(""); // Clear previous errors
+    setError("");
 
     try {
       let aiImageUrl = "";
+      if (imageFiles.length > 0) aiImageUrl = await uploadToImgBB(imageFiles[0]);
 
-      // 2. Image Handling
-      // Gemini works best with an image. If the user picked one, upload it to ImgBB first.
-      if (imageFiles.length > 0) {
-        // Upload just the first image for the estimation
-        // This gives us a public URL (e.g., https://i.ibb.co/...) that Gemini can read
-        aiImageUrl = await uploadToImgBB(imageFiles[0]);
-      }
-
-      // 3. Call Backend (Switched to Gemini internally)
       const suggestedPrice = await getAiPriceSuggestion(
         form.title,
         form.category,
         form.condition,
         form.description,
-        aiImageUrl // Public ImgBB URL
+        aiImageUrl
       );
 
-      // 4. Update the Price Input
-      // We convert to string because the HTML input expects a string
       if (suggestedPrice > 0) {
         setForm(prev => ({ ...prev, price: suggestedPrice.toString() }));
-        setSuccess(false); // Reset success state if needed
+        // Show AI popup
+        Swal.fire({
+          title: '💰 AI Suggestion',
+          text: `Suggested price: LKR ${suggestedPrice}`,
+          icon: 'info',
+          confirmButtonText: 'Got it!',
+          confirmButtonColor: '#4F46E5'
+        });
       } else {
-        setError("AI could not determine a price. Please enter it manually.");
+        setError("AI could not determine a price.");
       }
 
     } catch (err: any) {
       console.error("AI Estimation Failed:", err);
-      // Friendly error message
-      setError("AI service is currently busy. Please enter price manually.");
+      setError("AI service is busy. Enter price manually.");
     } finally {
       setIsAILoading(false);
     }
   };
 
-  // --- PUBLISH HANDLER ---
+  // --- Publish Handler ---
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Validation
     if (!form.title.trim() || !form.description.trim()) {
       setError("Title and Description are required.");
       setLoading(false);
       return;
     }
-    
+
     if (imageFiles.length === 0) {
       setError("Please upload at least one photo.");
       setLoading(false);
@@ -144,13 +133,9 @@ const PostItem = () => {
 
     try {
       setLoadingText("Uploading photos...");
-      
-      // Upload All Images to ImgBB
-      const uploadPromises = imageFiles.map((file) => uploadToImgBB(file));
-      const imageUrls = await Promise.all(uploadPromises);
+      const imageUrls = await Promise.all(imageFiles.map(file => uploadToImgBB(file)));
 
       setLoadingText("Creating listing...");
-
       const itemData = {
         title: form.title,
         description: form.description,
@@ -159,20 +144,34 @@ const PostItem = () => {
         mode: mode.toUpperCase(),
         price: mode === 'sell' ? form.price : 0,
         seeking: mode === 'exchange' ? form.seeking : '',
-        images: imageUrls 
+        images: imageUrls
       };
 
       const res = await createItem(itemData);
       console.log(res); 
 
-      // Success Check
-      if (res) { 
-        setSuccess(true);
-        setTimeout(() => navigate('/dashboard'), 1500);
+      if (res) {
+        // SweetAlert success popup
+        await Swal.fire({
+          title: '🎉 Success!',
+          text: 'Your item has been published successfully.',
+          icon: 'success',
+          confirmButtonText: 'Go to Dashboard',
+          confirmButtonColor: '#4F46E5',
+          timer: 2500,
+          timerProgressBar: true
+        });
+        navigate('/dashboard');
       }
+
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || "Failed to create listing.");
+      Swal.fire({
+        title: '❌ Failed!',
+        text: err.response?.data?.message || "Failed to create listing.",
+        icon: 'error',
+        confirmButtonColor: '#EF4444'
+      });
     } finally {
       setLoading(false);
     }
@@ -186,7 +185,6 @@ const PostItem = () => {
       default: return { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200', ring: 'focus:ring-slate-500', badge: 'bg-slate-500' };
     }
   };
-
   const theme = getTheme();
 
   return (
