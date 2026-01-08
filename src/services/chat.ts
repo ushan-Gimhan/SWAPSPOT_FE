@@ -2,9 +2,10 @@ import api from "./api";
 
 // Get my chats
 export const fetchMyChats = async () => {
-  const res = await api.get("/chat");
+  const res = await api.get('/chat/getMyChat');
   return res.data;
 };
+
 
 // Get messages of a chat
 export const fetchMessages = async (chatId: string) => {

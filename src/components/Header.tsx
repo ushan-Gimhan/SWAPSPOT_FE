@@ -8,7 +8,6 @@ import {
   PlusCircle,
   ShoppingBag,
   ArrowRightLeft,
-  MessageCircle, // 👈 Added Icon
 } from "lucide-react";
 import { useAuth } from "../context/authContext";
 
@@ -62,11 +61,6 @@ const Header = () => {
             <ShoppingBag size={18} strokeWidth={2.5} /> Market
           </Link>
 
-          {/* 👇 NEW MESSAGES BUTTON */}
-          <Link to="/messages" className={navLinkClass("/messages")}>
-            <MessageCircle size={18} strokeWidth={2.5} /> Messages
-          </Link>
-
           <Link to="/post" className={navLinkClass("/post")}>
             <PlusCircle size={18} strokeWidth={2.5} /> Post Item
           </Link>
@@ -105,15 +99,6 @@ const Header = () => {
             className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 text-slate-700 font-bold"
           >
             <ShoppingBag size={20} className="text-indigo-500"/> Market
-          </Link>
-
-          {/* 👇 NEW MESSAGES MOBILE LINK */}
-          <Link 
-            to="/messages" 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 text-slate-700 font-bold"
-          >
-            <MessageCircle size={20} className="text-indigo-500"/> Messages
           </Link>
 
           <Link 
